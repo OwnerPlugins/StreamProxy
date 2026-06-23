@@ -6,11 +6,11 @@ from Components.Language import language
 import gettext
 import os
 
-try:
-    from Crypto.Cipher import AES
-    CRYPTO_AVAILABLE = True
-except ImportError:
-    CRYPTO_AVAILABLE = False
+# try:
+    # from Crypto.Cipher import AES
+    # CRYPTO_AVAILABLE = True
+# except ImportError:
+    # CRYPTO_AVAILABLE = False
 
 print("[StreamProxy] Plugin init")
 
