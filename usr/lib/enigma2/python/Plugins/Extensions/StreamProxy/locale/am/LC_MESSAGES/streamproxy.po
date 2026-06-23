@@ -44,7 +44,7 @@ msgid "User-Agent"
 msgstr "ተጠቃሚ-ወኪል"
 
 msgid "User-Agent personalizzato"
-msgstr ""
+msgstr "ብጁ ተጠቃሚ-ወኪል"
 
 msgid "Visualizza log"
 msgstr "የምዝግብ ማስታወሻዎችን ይመልከቱ"

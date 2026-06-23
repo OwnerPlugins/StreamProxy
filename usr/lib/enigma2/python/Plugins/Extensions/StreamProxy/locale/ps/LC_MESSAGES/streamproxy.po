@@ -41,7 +41,7 @@ msgid "StreamProxy Setup"
 msgstr "StreamProxy ترتیب"
 
 msgid "User-Agent"
-msgstr ""
+msgstr "د کارونکي اجنټ"
 
 msgid "User-Agent personalizzato"
 msgstr "د ګمرک کارونکي ایجنټ"
