@@ -36,4 +36,3 @@ language.addCallback(localeInit)
 import importlib.util  # noqa: F401
 CRYPTO_AVAILABLE = importlib.util.find_spec("Crypto.Cipher.AES") is not None
 print("[StreamProxy] Plugin init")
-
