@@ -1,4 +1,6 @@
-# proxy_utils.py - Utilità per la gestione dei proxy
+# -*- coding: utf-8 -*-
+# proxy_utils.py - Utility functions for proxy management
+
 import os
 import random
 import time
@@ -7,7 +9,7 @@ import threading
 from urllib.parse import urlparse
 from .StreamProxyLog import enhanced_log
 
-# Configurazione iniziale
+# Initial configuration
 VERIFY_SSL = os.environ.get(
     'VERIFY_SSL',
     'false').lower() not in (
@@ -15,19 +17,19 @@ VERIFY_SSL = os.environ.get(
         '0',
     'no')
 if not VERIFY_SSL:
-    enhanced_log("ATTENZIONE: Verifica SSL disabilitata", "WARNING", "PROXY")
+    enhanced_log("WARNING: SSL verification disabled", "WARNING", "PROXY")
     import urllib3
     urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-# Timeout per le richieste HTTP in secondi
+# HTTP request timeout in seconds
 REQUEST_TIMEOUT = int(os.environ.get('REQUEST_TIMEOUT', 15))
 
-# Lista dei proxy disponibili
+# List of available proxies
 PROXY_LIST = []
 
 
 def setup_proxies():
-    """Carica la lista di proxy SOCKS5 dalla variabile d'ambiente."""
+    """Load the SOCKS5 proxy list from the environment variable."""
     global PROXY_LIST
     proxy_list_str = os.environ.get('SOCKS5_PROXY')
     if proxy_list_str:
@@ -36,48 +38,46 @@ def setup_proxies():
 
         if not raw_proxy_list:
             enhanced_log(
-                "Nessun proxy SOCKS5 valido trovato nella variabile d'ambiente.",
+                "No valid SOCKS5 proxies found in environment variable.",
                 "WARNING",
                 "PROXY")
             PROXY_LIST = []
             return
 
         enhanced_log(
-            f"Trovati {
-                len(raw_proxy_list)} proxy SOCKS5.",
+            "Found %d SOCKS5 proxies." % len(raw_proxy_list),
             "INFO",
             "PROXY")
         for proxy in raw_proxy_list:
-            # Riconosce e converte automaticamente a socks5h per la risoluzione
-            # DNS remota
+            # Recognise and automatically convert to socks5h for remote DNS resolution
             final_proxy_url = proxy
             if proxy.startswith('socks5://'):
                 final_proxy_url = 'socks5h' + proxy[len('socks5'):]
                 enhanced_log(
-                    "Proxy convertito per garantire la risoluzione DNS remota.",
+                    "Proxy converted to ensure remote DNS resolution.",
                     "INFO",
                     "PROXY")
             elif not proxy.startswith('socks5h://'):
                 enhanced_log(
-                    "ATTENZIONE: L'URL del proxy non è un formato SOCKS5 valido.",
+                    "WARNING: The proxy URL is not a valid SOCKS5 format.",
                     "WARNING",
                     "PROXY")
             PROXY_LIST.append(final_proxy_url)
 
         enhanced_log(
-            "Assicurati di aver installato la dipendenza necessaria: 'pip install PySocks'",
+            "Make sure you have installed the required dependency: 'pip install PySocks'",
             "INFO",
             "PROXY")
     else:
         PROXY_LIST = []
-        enhanced_log("Nessun proxy SOCKS5 configurato.", "INFO", "PROXY")
+        enhanced_log("No SOCKS5 proxies configured.", "INFO", "PROXY")
 
 
 def get_proxy_for_url(url):
-    """Seleziona proxy specifici per DaddyLive o proxy generali per altri domini"""
-    no_proxy_domains = ['github.com']  # Domini che non usano proxy
+    """Select specific proxies for DaddyLive or general proxies for other domains."""
+    no_proxy_domains = ['github.com']  # Domains that do not use proxy
 
-    # Controlla se è un URL DaddyLive
+    # Check if it is a DaddyLive URL
     is_daddylive = (
         'newkso.ru' in url.lower() or
         '/stream-' in url.lower() or
@@ -85,12 +85,12 @@ def get_proxy_for_url(url):
         'daddy' in url.lower()
     )
 
-    # Se è DaddyLive, usa i proxy specifici
+    # If DaddyLive, use specific proxies
     if is_daddylive:
-        enhanced_log(f"URL DaddyLive rilevato: {url}", "DEBUG", "PROXY")
+        enhanced_log("DaddyLive URL detected: %s" % url, "DEBUG", "PROXY")
         return get_daddy_proxy_list()
 
-    # Altrimenti usa i proxy generali
+    # Otherwise use general proxies
     if not PROXY_LIST:
         return None
 
@@ -106,7 +106,7 @@ def get_proxy_for_url(url):
 
 
 def get_daddy_proxy_list():
-    """Carica la lista di proxy specifici per DaddyLive."""
+    """Load the list of proxies specific to DaddyLive."""
     daddy_proxy_value = os.environ.get('DADDY_PROXY', '')
     daddy_proxies = []
 
@@ -118,33 +118,32 @@ def get_daddy_proxy_list():
             if proxy.startswith('socks5://'):
                 final_proxy_url = 'socks5h' + proxy[len('socks5'):]
                 enhanced_log(
-                    "Proxy DaddyLive SOCKS5 convertito",
+                    "DaddyLive SOCKS5 proxy converted",
                     "INFO",
                     "PROXY")
             elif proxy.startswith('socks5h://'):
                 final_proxy_url = proxy
                 enhanced_log(
-                    "Proxy DaddyLive SOCKS5H configurato",
+                    "DaddyLive SOCKS5H proxy configured",
                     "INFO",
                     "PROXY")
             elif proxy.startswith('http://') or proxy.startswith('https://'):
                 final_proxy_url = proxy
                 enhanced_log(
-                    "Proxy DaddyLive HTTP/HTTPS configurato",
+                    "DaddyLive HTTP/HTTPS proxy configured",
                     "INFO",
                     "PROXY")
             else:
-                final_proxy_url = f"http://{proxy}"
+                final_proxy_url = "http://%s" % proxy
                 enhanced_log(
-                    "Proxy DaddyLive convertito in HTTP",
+                    "DaddyLive proxy converted to HTTP",
                     "INFO",
                     "PROXY")
 
             daddy_proxies.append(final_proxy_url)
 
         enhanced_log(
-            f"Trovati {
-                len(daddy_proxies)} proxy DaddyLive",
+            "Found %d DaddyLive proxies" % len(daddy_proxies),
             "INFO",
             "PROXY")
 
@@ -155,7 +154,7 @@ def get_daddy_proxy_list():
 
 
 def get_random_proxy():
-    """Seleziona un proxy casuale dalla lista e lo formatta per la libreria requests."""
+    """Select a random proxy from the list and format it for the requests library."""
     if not PROXY_LIST:
         return None
     chosen_proxy = random.choice(PROXY_LIST)
@@ -163,18 +162,18 @@ def get_random_proxy():
 
 
 def create_robust_session():
-    """Crea una sessione requests robusta e compatibile con Enigma2."""
+    """Create a robust requests session compatible with Enigma2."""
     session = requests.Session()
 
-    # Parametri di keep-alive (valori compatibili con sistemi embedded)
-    KEEP_ALIVE_TIMEOUT = 10  # secondi
+    # Keep-alive parameters (values compatible with embedded systems)
+    KEEP_ALIVE_TIMEOUT = 10  # seconds
     MAX_KEEP_ALIVE_REQUESTS = 10
     session.headers.update({
         'Connection': 'keep-alive',
-        'Keep-Alive': f'timeout={KEEP_ALIVE_TIMEOUT}, max={MAX_KEEP_ALIVE_REQUESTS}'
+        'Keep-Alive': 'timeout=%d, max=%d' % (KEEP_ALIVE_TIMEOUT, MAX_KEEP_ALIVE_REQUESTS)
     })
 
-    # Configurazione retry semplice
+    # Simple retry configuration
     try:
         from requests.adapters import HTTPAdapter
         from urllib3.util.retry import Retry
@@ -195,33 +194,32 @@ def create_robust_session():
         session.mount("http://", adapter)
         session.mount("https://", adapter)
     except Exception:
-        # Su Enigma2 può mancare urllib3.util.retry: fallback senza retry
-        # avanzato
+        # On Enigma2, urllib3.util.retry may be missing: fallback without advanced retry
         pass
 
     return session
 
 
-# Pool di sessioni persistenti
+# Pool of persistent sessions
 SESSION_POOL = {}
 SESSION_LOCK = threading.Lock()
 
 
 def get_persistent_session(proxy_url=None, max_age=300):
-    """Ottiene una sessione persistente dal pool o ne crea una nuova con controllo età"""
+    """Get a persistent session from the pool or create a new one with age control."""
     pool_key = proxy_url if proxy_url else 'default'
     current_time = time.time()
 
     with SESSION_LOCK:
-        # Controlla se la sessione esiste e non è troppo vecchia
+        # Check if the session exists and is not too old
         if pool_key in SESSION_POOL:
             session_data = SESSION_POOL[pool_key]
             session_age = current_time - session_data.get('created_at', 0)
 
-            # Se la sessione è troppo vecchia, creane una nuova
+            # If the session is too old, create a new one
             if session_age > max_age:
                 enhanced_log(
-                    f"Sessione troppo vecchia ({session_age}s), creazione nuova",
+                    "Session too old (%ds), creating new one" % session_age,
                     "INFO",
                     "PROXY")
                 session = create_robust_session()
@@ -234,11 +232,11 @@ def get_persistent_session(proxy_url=None, max_age=300):
                     'requests_count': 0
                 }
             else:
-                # Incrementa il contatore di richieste
+                # Increment the request counter
                 session_data['requests_count'] += 1
                 return session_data['session']
         else:
-            # Crea una nuova sessione
+            # Create a new session
             session = create_robust_session()
             if proxy_url:
                 session.proxies.update({'http': proxy_url, 'https': proxy_url})
@@ -248,9 +246,9 @@ def get_persistent_session(proxy_url=None, max_age=300):
                 'requests_count': 0
             }
 
-        # Limita il numero di sessioni nel pool
-        if len(SESSION_POOL) > 20:  # Numero massimo di sessioni
-            # Rimuovi la sessione più vecchia
+        # Limit the number of sessions in the pool
+        if len(SESSION_POOL) > 20:  # Maximum number of sessions
+            # Remove the oldest session
             oldest_key = min(SESSION_POOL.keys(),
                              key=lambda k: SESSION_POOL[k]['created_at'])
             del SESSION_POOL[oldest_key]
@@ -264,14 +262,14 @@ def make_persistent_request(
         timeout=None,
         proxy_url=None,
         **kwargs):
-    """Effettua una richiesta usando connessioni persistenti (compatibile Enigma2)"""
+    """Make a request using persistent connections (compatible with Enigma2)."""
     session = get_persistent_session(proxy_url)
-    # Parametri di keep-alive
-    KEEP_ALIVE_TIMEOUT = 10  # secondi
+    # Keep-alive parameters
+    KEEP_ALIVE_TIMEOUT = 10  # seconds
     MAX_KEEP_ALIVE_REQUESTS = 10
     request_headers = {
         'Connection': 'keep-alive',
-        'Keep-Alive': f'timeout={KEEP_ALIVE_TIMEOUT}, max={MAX_KEEP_ALIVE_REQUESTS}'}
+        'Keep-Alive': 'timeout=%d, max=%d' % (KEEP_ALIVE_TIMEOUT, MAX_KEEP_ALIVE_REQUESTS)}
     if headers:
         request_headers.update(headers)
     try:
@@ -285,10 +283,10 @@ def make_persistent_request(
         return response
     except Exception as e:
         enhanced_log(
-            f"Errore nella richiesta persistente: {e}",
+            "Error in persistent request: %s" % e,
             "ERROR",
             "PROXY")
-        # In caso di errore, rimuovi la sessione dal pool
+        # On error, remove the session from the pool
         with SESSION_LOCK:
             pool_key = proxy_url if proxy_url else 'default'
             if pool_key in SESSION_POOL:
@@ -297,17 +295,17 @@ def make_persistent_request(
 
 
 def get_dynamic_timeout(url, base_timeout=None):
-    """Calcola timeout dinamico basato sul tipo di risorsa."""
+    """Calculate dynamic timeout based on resource type."""
     if base_timeout is None:
-        base_timeout = 8  # Timeout base ridotto
+        base_timeout = 8  # Reduced base timeout
     url_l = url.lower() if isinstance(url, str) else ""
     if ".ts" in url_l:
-        return 5  # Timeout fisso breve per TS
+        return 5  # Short fixed timeout for TS
     elif ".m3u8" in url_l:
         return 8
     else:
         return base_timeout
 
 
-# Inizializza i proxy all'importazione del modulo
+# Initialise proxies on module import
 setup_proxies()
