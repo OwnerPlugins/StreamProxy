@@ -1,6 +1,10 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import absolute_import
+from Tools.Directories import resolveFilename, SCOPE_PLUGINS
+from Components.Language import language
+import gettext
+import os
 
 try:
     from Crypto.Cipher import AES
@@ -13,11 +17,6 @@ print("[StreamProxy] Plugin init")
 __license__ = "GPL-v2"
 __version__ = "1.0_beta"
 
-import os
-import gettext
-
-from Components.Language import language
-from Tools.Directories import resolveFilename, SCOPE_PLUGINS
 
 PluginLanguageDomain = "streamproxy"
 PluginLanguagePath = "Extensions/StreamProxy/locale"
