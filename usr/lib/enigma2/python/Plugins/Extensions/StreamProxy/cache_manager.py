@@ -71,7 +71,8 @@ class SimpleTTLCache(dict):
                     key,
                     0)) < self.ttl:
                 return dict.__getitem__(self, key)
-            # If the key is expired or does not exist, remove it and raise KeyError
+            # If the key is expired or does not exist, remove it and raise
+            # KeyError
             self._safe_remove(key)
             raise KeyError(key)
 
@@ -139,7 +140,8 @@ class SimpleTTLCache(dict):
                             self._timestamps, key=self._timestamps.get)
                         self._safe_remove(oldest)
             except Exception as e:
-                # Catch any exceptions to prevent the cleanup thread from stopping
+                # Catch any exceptions to prevent the cleanup thread from
+                # stopping
                 enhanced_log(
                     "Error during TTL cache cleanup: %s" % str(e),
                     "ERROR",
@@ -166,7 +168,8 @@ class SimpleLRUCache(dict):
             if dict.__contains__(self, key):
                 self._order.remove(key)
             elif len(self) >= self.maxsize:
-                # Remove items no longer in the cache for consistency before eviction
+                # Remove items no longer in the cache for consistency before
+                # eviction
                 self._order = [k for k in self._order if k in self]
                 if self._order:  # Only if there are correctly removed items
                     oldest = self._order.pop(0)

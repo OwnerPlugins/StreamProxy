@@ -49,7 +49,8 @@ def check_appcore_integration():
         print("AppCore imported successfully")
 
         try:
-            result = service_monitor_callback('/proxy/m3u', url='test', test='1')
+            result = service_monitor_callback(
+                '/proxy/m3u', url='test', test='1')
             print(f"[OK] Callback working: {type(result)}")
         except Exception as e:
             print(f"[FAIL] Callback error: {str(e)}")
@@ -80,7 +81,10 @@ def check_service_monitor():
         from ServiceMonitor import StreamProxyServiceMonitor
         print("[OK] ServiceMonitor imported successfully")
 
-        methods_to_check = ['_proxy_play_service', '_ensure_server_running', 'notify_m3u']
+        methods_to_check = [
+            '_proxy_play_service',
+            '_ensure_server_running',
+            'notify_m3u']
         for method in methods_to_check:
             if hasattr(StreamProxyServiceMonitor, method):
                 print(f"[OK] Method {method}: FOUND")
@@ -111,7 +115,10 @@ def check_pipeline():
         print("[OK] Pipeline instance created", str(pipeline))
 
         test_content = "#EXTM3U\n#EXTINF:10.0,\ntest.ts\n"
-        result = process_content(test_content, "application/vnd.apple.mpegurl", "test_url")
+        result = process_content(
+            test_content,
+            "application/vnd.apple.mpegurl",
+            "test_url")
         print(f"[OK] Test processing: {result}")
 
     except Exception as e:
