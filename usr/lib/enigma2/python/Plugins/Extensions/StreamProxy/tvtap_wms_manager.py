@@ -17,7 +17,7 @@ try:
     from .StreamProxyLog import enhanced_log
 except ImportError:
     def enhanced_log(message, level="INFO", component="TVTAP_WMS"):
-        print(f"[{level}] [{component}] {message}")
+        print("[%s] [%s] %s" % (level, component, message))
 
 
 class TVTapWMSManager:
@@ -63,7 +63,7 @@ class TVTapWMSManager:
             decoded_str = decoded_bytes.decode('utf-8', errors='ignore')
 
             enhanced_log(
-                f"Decoded wmsAuthSign: {decoded_str}",
+                "Decoded wmsAuthSign: %s" % decoded_str,
                 "DEBUG"
             )
 
@@ -92,7 +92,7 @@ class TVTapWMSManager:
             return info
 
         except Exception as e:
-            enhanced_log(f"Error decoding wmsAuthSign: {e}", "ERROR")
+            enhanced_log("Error decoding wmsAuthSign: %s" % e, "ERROR")
             return None
 
     def calculate_expiry_from_authsign(self, authsign):
@@ -139,7 +139,7 @@ class TVTapWMSManager:
                         )
 
                         enhanced_log(
-                            f"Server time parsed: {server_time}",
+                            "Server time parsed: %s" % server_time,
                             "DEBUG"
                         )
                     else:
@@ -148,7 +148,7 @@ class TVTapWMSManager:
                 except (ValueError, AttributeError) as e:
                     # Parsing failed - token likely invalid
                     enhanced_log(
-                        f"Server time parsing failed: {e}, forcing refresh",
+                        "Server time parsing failed: %s, forcing refresh" % e,
                         "ERROR"
                     )
                     return datetime.now()  # force immediate refresh
@@ -164,7 +164,8 @@ class TVTapWMSManager:
                 real_expires_at = real_expires_at + timedelta(hours=1)
 
                 enhanced_log(
-                    f"Server time: {server_time} UTC, Now: {now}, Expires: {real_expires_at}",
+                    "Server time: %s UTC, Now: %s, Expires: %s" % (
+                        server_time, now, real_expires_at),
                     "DEBUG")
 
                 # Check if authSign is too old (>24h)
@@ -172,20 +173,19 @@ class TVTapWMSManager:
 
                 if age_hours > 24:
                     enhanced_log(
-                        f"wmsAuthSign too old! Age: {
-                            age_hours:.1f}h, forcing refresh",
+                        "wmsAuthSign too old! Age: %.1fh, forcing refresh" % age_hours,
                         "WARNING")
                     return now
 
                 # Check if already expired
                 if real_expires_at <= now:
                     enhanced_log(
-                        f"wmsAuthSign expired! Expiry: {real_expires_at}, Now: {now}",
+                        "wmsAuthSign expired! Expiry: %s, Now: %s" % (real_expires_at, now),
                         "WARNING")
                     return now
 
                 enhanced_log(
-                    f"wmsAuthSign valid until: {real_expires_at}",
+                    "wmsAuthSign valid until: %s" % real_expires_at,
                     "DEBUG"
                 )
                 return real_expires_at
@@ -197,7 +197,8 @@ class TVTapWMSManager:
                 expires_at = datetime.now() + timedelta(minutes=valid_minutes)
 
                 enhanced_log(
-                    f"Fallback expiry from validminutes: {expires_at} ({valid_minutes} min)",
+                    "Fallback expiry from validminutes: %s (%d min)" % (
+                        expires_at, valid_minutes),
                     "DEBUG")
 
                 return expires_at
@@ -206,7 +207,7 @@ class TVTapWMSManager:
             return datetime.now() + timedelta(seconds=self.default_validity)
 
         except Exception as e:
-            enhanced_log(f"Error calculating expiry: {e}", "ERROR")
+            enhanced_log("Error calculating expiry: %s" % e, "ERROR")
             return datetime.now() + timedelta(seconds=self.default_validity)
 
     def resolve_wms_tvtap_url(self, original_url, channel_name=None):
@@ -214,7 +215,7 @@ class TVTapWMSManager:
         Resolve TVTap WMS URL ALWAYS regenerating (NO CACHE).
         """
         enhanced_log(
-            f"Resolving TVTap WMS URL: {original_url[:100]}...",
+            "Resolving TVTap WMS URL: %s..." % original_url[:100],
             "INFO"
         )
 
@@ -231,7 +232,7 @@ class TVTapWMSManager:
     def _resolve_fresh_wms_url(self, original_url, channel_name, cache_key):
         """Resolves a new TVTap WMS URL, first checking if wmsAuthSign is still valid."""
         enhanced_log(
-            f"Resolving fresh TVTap WMS URL: {original_url}",
+            "Resolving fresh TVTap WMS URL: %s" % original_url,
             "INFO"
         )
 
@@ -256,9 +257,8 @@ class TVTapWMSManager:
                 # If valid for more than 2 minutes, reuse it
                 if time_to_expiry > 120:
                     enhanced_log(
-                        f"✅ Existing wmsAuthSign valid for {
-                            time_to_expiry /
-                            60:.1f} min, reusing it",
+                        "Existing wmsAuthSign valid for %.1f min, reusing it" % (
+                            time_to_expiry / 60),
                         "INFO")
 
                     cache_data = {
@@ -281,14 +281,13 @@ class TVTapWMSManager:
 
                 else:
                     enhanced_log(
-                        f"⚠️ wmsAuthSign expires in {
-                            time_to_expiry /
-                            60:.1f} min, regenerating",
+                        "wmsAuthSign expires in %.1f min, regenerating" % (
+                            time_to_expiry / 60),
                         "WARNING")
 
             # FORCE REGENERATION OF wmsAuthSign VIA TVTap API
             enhanced_log(
-                "🔄 Forcing wmsAuthSign regeneration via TVTap API",
+                "Forcing wmsAuthSign regeneration via TVTap API",
                 "INFO"
             )
 
@@ -298,7 +297,7 @@ class TVTapWMSManager:
             )
 
             if not channel_to_search:
-                enhanced_log("❌ Unable to determine channel name", "ERROR")
+                enhanced_log("Unable to determine channel name", "ERROR")
                 return None
 
             # USE TVTap API TO GET FRESH STREAM
@@ -306,10 +305,10 @@ class TVTapWMSManager:
 
             if not fresh_stream_url or not self.is_wms_tvtap_url(
                     fresh_stream_url):
-                enhanced_log("❌ Unable to get stream from TVTap API", "ERROR")
+                enhanced_log("Unable to get stream from TVTap API", "ERROR")
                 return None
 
-            enhanced_log("✅ Fresh stream obtained from TVTap API", "INFO")
+            enhanced_log("Fresh stream obtained from TVTap API", "INFO")
 
             # Parse new URL
             parsed_url = urlparse(fresh_stream_url)
@@ -321,7 +320,7 @@ class TVTapWMSManager:
                 wms_authsign = query_params['wmsAuthSign'][0]
 
             if not wms_authsign:
-                enhanced_log("❌ New URL does not contain wmsAuthSign", "ERROR")
+                enhanced_log("New URL does not contain wmsAuthSign", "ERROR")
                 return None
 
             # Decode and calculate expiry
@@ -333,7 +332,8 @@ class TVTapWMSManager:
             domain = parsed_url.netloc
 
             enhanced_log(
-                f"🔑 Fresh wmsAuthSign: {wms_authsign[:20]}..., expires: {expires_at}",
+                "Fresh wmsAuthSign: %s..., expires: %s" % (
+                    wms_authsign[:20], expires_at),
                 "INFO"
             )
 
@@ -357,16 +357,16 @@ class TVTapWMSManager:
             # Update domain cache
             self.domain_cache[domain] = datetime.now()
 
-            enhanced_log(f"TVTap WMS URL resolved: {domain}", "INFO")
-            enhanced_log(f"Expiry: {expires_at}", "DEBUG")
+            enhanced_log("TVTap WMS URL resolved: %s" % domain, "INFO")
+            enhanced_log("Expiry: %s" % expires_at, "DEBUG")
 
             if decoded_info:
-                enhanced_log(f"Decoded info: {decoded_info}", "DEBUG")
+                enhanced_log("Decoded info: %s" % decoded_info, "DEBUG")
 
             return cache_data
 
         except Exception as e:
-            enhanced_log(f"Error resolving TVTap WMS URL: {e}", "ERROR")
+            enhanced_log("Error resolving TVTap WMS URL: %s" % e, "ERROR")
             return None
 
     def _is_cache_valid(self, cache_data):
@@ -391,7 +391,8 @@ class TVTapWMSManager:
         def refresh_worker():
             try:
                 enhanced_log(
-                    f"Background refresh TVTap WMS URL: {original_url[:50]}...", "DEBUG")
+                    "Background refresh TVTap WMS URL: %s..." % original_url[:50],
+                    "DEBUG")
                 time.sleep(5)  # Small delay
 
                 # Remove from cache to force regeneration
@@ -399,7 +400,8 @@ class TVTapWMSManager:
                     if cache_key in self.url_cache:
                         del self.url_cache[cache_key]
                         enhanced_log(
-                            "TVTap WMS cache removed for proactive refresh", "DEBUG")
+                            "TVTap WMS cache removed for proactive refresh",
+                            "DEBUG")
 
                 # Force regeneration by calling resolve_wms_tvtap_url
                 # This will trigger validation and wmsAuthSign regeneration
@@ -408,14 +410,15 @@ class TVTapWMSManager:
 
                 if refreshed_data and refreshed_data.get('was_refreshed'):
                     enhanced_log(
-                        "✅ Background refresh completed successfully", "INFO")
+                        "Background refresh completed successfully",
+                        "INFO")
                 else:
                     enhanced_log(
-                        "⚠️ Background refresh did not regenerate wmsAuthSign",
+                        "Background refresh did not regenerate wmsAuthSign",
                         "WARNING")
 
             except Exception as e:
-                enhanced_log(f"Error in WMS background refresh: {e}", "ERROR")
+                enhanced_log("Error in WMS background refresh: %s" % e, "ERROR")
 
         thread = threading.Thread(target=refresh_worker, daemon=True)
         thread.start()
@@ -436,7 +439,8 @@ class TVTapWMSManager:
                         'it-', '').replace('.stream', '')
                     channel_name = channel_name.replace('-', ' ').title()
                     enhanced_log(
-                        f"Channel name extracted (it- pattern): {channel_name}", "DEBUG")
+                        "Channel name extracted (it- pattern): %s" % channel_name,
+                        "DEBUG")
                     return channel_name
 
             # Attempt 2: filename without extension
@@ -450,7 +454,8 @@ class TVTapWMSManager:
                     channel_name = filename.replace(
                         '-', ' ').replace('_', ' ').title()
                     enhanced_log(
-                        f"Channel name extracted (filename): {channel_name}", "DEBUG")
+                        "Channel name extracted (filename): %s" % channel_name,
+                        "DEBUG")
                     return channel_name
 
             # Attempt 3: match against static list
@@ -463,11 +468,11 @@ class TVTapWMSManager:
                     ch_name_lower = ch['name'].lower().replace(' ', '')
                     if ch_name_lower in url_lower:
                         enhanced_log(
-                            f"Channel name found (static match): {
-                                ch['name']}", "DEBUG")
+                            "Channel name found (static match): %s" % ch['name'],
+                            "DEBUG")
                         return ch['name']
             except Exception as e:
-                enhanced_log(f"Static list fallback failed: {e}", "DEBUG")
+                enhanced_log("Static list fallback failed: %s" % e, "DEBUG")
 
             enhanced_log(
                 "Unable to extract channel name from URL",
@@ -475,7 +480,7 @@ class TVTapWMSManager:
             return None
 
         except Exception as e:
-            enhanced_log(f"Error extracting channel name: {e}", "ERROR")
+            enhanced_log("Error extracting channel name: %s" % e, "ERROR")
             return None
 
     def _get_fresh_tvtap_stream(self, channel_name):
@@ -484,39 +489,40 @@ class TVTapWMSManager:
             from .extractor.tvtap_extractor import get_tvtap_channels, find_channel_by_name, get_tvtap_stream
 
             enhanced_log(
-                f"🔄 Searching new stream for channel: {channel_name}",
+                "Searching new stream for channel: %s" % channel_name,
                 "INFO"
             )
 
-            enhanced_log("📡 Requesting TVTap API channel list...", "DEBUG")
+            enhanced_log("Requesting TVTap API channel list...", "DEBUG")
             channels = get_tvtap_channels()
             if not channels:
                 enhanced_log(
-                    "❌ No channels available from TVTap API", "ERROR"
+                    "No channels available from TVTap API",
+                    "ERROR"
                 )
                 return None
 
             enhanced_log(
-                f"✅ Received {len(channels)} channels from TVTap API",
+                "Received %d channels from TVTap API" % len(channels),
                 "DEBUG"
             )
 
             # Find channel by name
             enhanced_log(
-                f"🔍 Searching channel '{channel_name}' in list...",
+                "Searching channel '%s' in list..." % channel_name,
                 "DEBUG"
             )
             found_channel = find_channel_by_name(channel_name, channels)
             if not found_channel:
                 enhanced_log(
-                    f"❌ Channel '{channel_name}' not found in TVTap list",
+                    "Channel '%s' not found in TVTap list" % channel_name,
                     "WARNING"
                 )
 
                 # Log first 5 channels for debugging
                 sample = [ch.get('name', 'N/A') for ch in channels[:5]]
                 enhanced_log(
-                    f"📋 Available channels (sample): {sample}",
+                    "Available channels (sample): %s" % sample,
                     "DEBUG"
                 )
                 return None
@@ -524,50 +530,50 @@ class TVTapWMSManager:
             channel_id = found_channel.get('id')
             if not channel_id:
                 enhanced_log(
-                    f"❌ Missing ID for channel '{channel_name}'",
+                    "Missing ID for channel '%s'" % channel_name,
                     "ERROR"
                 )
                 return None
 
             enhanced_log(
-                f"✅ Channel found: {
-                    found_channel.get('name')} (ID: {channel_id})",
+                "Channel found: %s (ID: %s)" % (
+                    found_channel.get('name'), channel_id),
                 "INFO")
 
             # Get stream URL
             enhanced_log(
-                f"📡 Requesting stream URL for ID {channel_id}...",
+                "Requesting stream URL for ID %s..." % channel_id,
                 "DEBUG"
             )
             stream_url = get_tvtap_stream(channel_id)
 
             if stream_url:
                 enhanced_log(
-                    f"✅ New stream URL obtained: {stream_url[:80]}...",
+                    "New stream URL obtained: %s..." % stream_url[:80],
                     "INFO"
                 )
                 return stream_url
             else:
                 enhanced_log(
-                    f"❌ Unable to get stream URL for {channel_name}",
+                    "Unable to get stream URL for %s" % channel_name,
                     "ERROR"
                 )
                 return None
 
         except ImportError as e:
-            enhanced_log(f"❌ tvtap_extractor not available: {e}", "ERROR")
+            enhanced_log("tvtap_extractor not available: %s" % e, "ERROR")
             return None
 
         except Exception as e:
-            enhanced_log(f"❌ Error getting TVTap stream: {e}", "ERROR")
+            enhanced_log("Error getting TVTap stream: %s" % e, "ERROR")
             import traceback
-            enhanced_log(f"Stack trace: {traceback.format_exc()}", "DEBUG")
+            enhanced_log("Stack trace: %s" % traceback.format_exc(), "DEBUG")
             return None
 
     def _get_cache_key(self, url):
         """Generates cache key for URL."""
         parsed = urlparse(url)
-        base_url = f"{parsed.scheme}://{parsed.netloc}{parsed.path}"
+        base_url = "%s://%s%s" % (parsed.scheme, parsed.netloc, parsed.path)
         return hashlib.md5(base_url.encode()).hexdigest()
 
     def get_proxy_url_for_wms_url(
@@ -591,10 +597,10 @@ class TVTapWMSManager:
             return None
 
         # Build proxy URL
-        proxy_url = f"{base_proxy_url}/proxy/m3u?url={quote(resolved_url)}"
+        proxy_url = "%s/proxy/m3u?url=%s" % (base_proxy_url, quote(resolved_url))
 
         enhanced_log(
-            f"TVTap WMS proxy URL generated for: {channel_name or 'Unknown'}",
+            "TVTap WMS proxy URL generated for: %s" % (channel_name or 'Unknown'),
             "DEBUG"
         )
         return proxy_url
@@ -612,8 +618,7 @@ class TVTapWMSManager:
 
             if expired_keys:
                 enhanced_log(
-                    f"Cleaned {
-                        len(expired_keys)} expired TVTap WMS cache entries",
+                    "Cleaned %d expired TVTap WMS cache entries" % len(expired_keys),
                     "INFO")
 
     def get_stats(self):
@@ -640,7 +645,7 @@ class TVTapWMSManager:
             self.url_cache.clear()
 
             enhanced_log(
-                f"TVTap WMS cache cleared: {old_count} URLs removed",
+                "TVTap WMS cache cleared: %d URLs removed" % old_count,
                 "INFO"
             )
 
@@ -689,22 +694,22 @@ if __name__ == "__main__":
         "c2VydmVyX3RpbWU9OS82LzIwMjUgNToyNjozMyBBTSZoYXNoX3ZhbHVl="
     )
 
-    print(f"Test URL: {test_url}")
-    print(f"Is WMS TVTap: {is_wms_tvtap_url(test_url)}")
+    print("Test URL: %s" % test_url)
+    print("Is WMS TVTap: %s" % is_wms_tvtap_url(test_url))
 
     if is_wms_tvtap_url(test_url):
         resolved = resolve_wms_tvtap_url(test_url, "Baby TV")
 
         if resolved:
-            print(f"Resolved: {resolved['resolved_url']}")
-            print(f"Domain: {resolved['domain']}")
-            print(f"AuthSign: {resolved.get('authsign', 'N/A')[:20]}...")
-            print(f"Expires: {resolved['expires_at']}")
-            print(f"Decoded info: {resolved.get('decoded_info', {})}")
+            print("Resolved: %s" % resolved['resolved_url'])
+            print("Domain: %s" % resolved['domain'])
+            print("AuthSign: %s..." % resolved.get('authsign', 'N/A')[:20])
+            print("Expires: %s" % resolved['expires_at'])
+            print("Decoded info: %s" % resolved.get('decoded_info', {}))
         else:
             print("Resolution failed")
 
     stats = get_wms_stats()
-    print(f"Statistics: {stats}")
+    print("Statistics: %s" % stats)
 
     print("\n=== Test completed ===")
