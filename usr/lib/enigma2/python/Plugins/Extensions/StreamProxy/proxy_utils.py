@@ -3,7 +3,6 @@ import os
 import random
 import time
 import requests
-import socket
 import threading
 from urllib.parse import urlparse
 from .StreamProxyLog import enhanced_log
@@ -55,12 +54,12 @@ def setup_proxies():
             if proxy.startswith('socks5://'):
                 final_proxy_url = 'socks5h' + proxy[len('socks5'):]
                 enhanced_log(
-                    f"Proxy convertito per garantire la risoluzione DNS remota.",
+                    "Proxy convertito per garantire la risoluzione DNS remota.",
                     "INFO",
                     "PROXY")
             elif not proxy.startswith('socks5h://'):
                 enhanced_log(
-                    f"ATTENZIONE: L'URL del proxy non è un formato SOCKS5 valido.",
+                    "ATTENZIONE: L'URL del proxy non è un formato SOCKS5 valido.",
                     "WARNING",
                     "PROXY")
             PROXY_LIST.append(final_proxy_url)
@@ -119,25 +118,25 @@ def get_daddy_proxy_list():
             if proxy.startswith('socks5://'):
                 final_proxy_url = 'socks5h' + proxy[len('socks5'):]
                 enhanced_log(
-                    f"Proxy DaddyLive SOCKS5 convertito",
+                    "Proxy DaddyLive SOCKS5 convertito",
                     "INFO",
                     "PROXY")
             elif proxy.startswith('socks5h://'):
                 final_proxy_url = proxy
                 enhanced_log(
-                    f"Proxy DaddyLive SOCKS5H configurato",
+                    "Proxy DaddyLive SOCKS5H configurato",
                     "INFO",
                     "PROXY")
             elif proxy.startswith('http://') or proxy.startswith('https://'):
                 final_proxy_url = proxy
                 enhanced_log(
-                    f"Proxy DaddyLive HTTP/HTTPS configurato",
+                    "Proxy DaddyLive HTTP/HTTPS configurato",
                     "INFO",
                     "PROXY")
             else:
                 final_proxy_url = f"http://{proxy}"
                 enhanced_log(
-                    f"Proxy DaddyLive convertito in HTTP",
+                    "Proxy DaddyLive convertito in HTTP",
                     "INFO",
                     "PROXY")
 
@@ -210,7 +209,6 @@ SESSION_LOCK = threading.Lock()
 
 def get_persistent_session(proxy_url=None, max_age=300):
     """Ottiene una sessione persistente dal pool o ne crea una nuova con controllo età"""
-    global SESSION_POOL, SESSION_LOCK
     pool_key = proxy_url if proxy_url else 'default'
     current_time = time.time()
 

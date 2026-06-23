@@ -1,4 +1,5 @@
-# vavoo_extractor.py - Vavoo URL extractor per Enigma2 Python 3
+# -*- coding: utf-8 -*-
+# vavoo_extractor.py - Vavoo URL extractor for Enigma2 Python 3
 import hashlib
 import re
 import time
@@ -28,7 +29,7 @@ _LOKKE_PING_URL = "https://www.vavoo.tv/api/app/ping"
 _LOKKE_TOKEN = "ldCvE092e7gER0rVIajfsXIvRhwlrAzP6_1oEJ4q6HH89QHt24v6NNL_jQJO219hiLOXF2hqEfsUuEWitEIGN4EaHHEHb7Cd7gojc5SQYRFzU3XWo_kMeryAUbcwWnQrnf0-"
 _RESOLVE_URL = "https://vavoo.to/mediahubmx-resolve.json"
 _TS_PING2_URL = "https://www.vavoo.tv/api/box/ping2"
-_TS_VEC = "9frjpxPjxSNilxJPCJ0XGYs6scej3dW/h/VWlnKUiLSG8IP7mfyDU7NirOlld+VtCKGj03XjetfliDMhIev7wcARo+YTU8KPFuVQP9E2DVXzY2BFo1NhE6qEmPfNDnm74eyl/7iFJ0EETm6XbYyz8IKBkAqPN/Spp3PZ2ulKg3QBSDxcVN4R5zRn7OsgLJ2CNTuWkd/h451lDCp+TtTuvnAEhcQckdsydFhTZCK5IiWrrTIC/d4qDXEd+GtOP4hPdoIuCaNzYfX3lLCwFENC6RZoTBYLrcKVVgbqyQZ7DnLqfLqvf3z0FVUWx9H21liGFpByzdnoxyFkue3NzrFtkRL37xkx9ITucepSYKzUVEfyBh+/3mtzKY26VIRkJFkpf8KVcCRNrTRQn47Wuq4gC7sSwT7eHCAydKSACcUMMdpPSvbvfOmIqeBNA83osX8FPFYUMZsjvYNEE3arbFiGsQlggBKgg1V3oN+5ni3Vjc5InHg/xv476LHDFnNdAJx448ph3DoAiJjr2g4ZTNynfSxdzA68qSuJY8UjyzgDjG0RIMv2h7DlQNjkAXv4k1BrPpfOiOqH67yIarNmkPIwrIV+W9TTV/yRyE1LEgOr4DK8uW2AUtHOPA2gn6P5sgFyi68w55MZBPepddfYTQ+E1N6R/hWnMYPt/i0xSUeMPekX47iucfpFBEv9Uh9zdGiEB+0P3LVMP+q+pbBU4o1NkKyY1V8wH1Wilr0a+q87kEnQ1LWYMMBhaP9yFseGSbYwdeLsX9uR1uPaN+u4woO2g8sw9Y5ze5XMgOVpFCZaut02I5k0U4WPyN5adQjG8sAzxsI3KsV04DEVymj224iqg2Lzz53Xz9yEy+7/85ILQpJ6llCyqpHLFyHq/kJxYPhDUF755WaHJEaFRPxUqbparNX+mCE9Xzy7Q/KTgAPiRS41FHXXv+7XSPp4cy9jli0BVnYf13Xsp28OGs/D8Nl3NgEn3/eUcMN80JRdsOrV62fnBVMBNf36+LbISdvsFAFr0xyuPGmlIETcFyxJkrGZnhHAxwzsvZ+Uwf8lffBfZFPRrNv+tgeeLpatVcHLHZGeTgWWml6tIHwWUqv2TVJeMkAEL5PPS4Gtbscau5HM+FEjtGS+KClfX1CNKvgYJl7mLDEf5ZYQv5kHaoQ6RcPaR6vUNn02zpq5/X3EPIgUKF0r/0ctmoT84B2J1BKfCbctdFY9br7JSJ6DvUxyde68jB+Il6qNcQwTFj4cNErk4x719Y42NoAnnQYC2/qfL/gAhJl8TKMvBt3Bno+va8ve8E0z8yEuMLUqe8OXLce6nCa+L5LYK1aBdb60BYbMeWk1qmG6Nk9OnYLhzDyrd9iHDd7X95OM6X5wiMVZRn5ebw4askTTc50xmrg4eic2U1w1JpSEjdH/u/hXrWKSMWAxaj34uQnMuWxPZEXoVxzGyuUbroXRfkhzpqmqqqOcypjsWPdq5BOUGL/Riwjm6yMI0x9kbO8+VoQ6RYfjAbxNriZ1cQ+AW1fqEgnRWXmjt4Z1M0ygUBi8w71bDML1YG6UHeC2cJ2CCCxSrfycKQhpSdI1QIuwd2eyIpd4LgwrMiY3xNWreAF+qobNxvE7ypKTISNrz0iYIhU0aKNlcGwYd0FXIRfKVBzSBe4MRK2pGLDNO6ytoHxvJweZ8h1XG8RWc4aB5gTnB7Tjiqym4b64lRdj1DPHJnzD4aqRixpXhzYzWVDN2kONCR5i2quYbnVFN4sSfLiKeOwKX4JdmzpYixNZXjLkG14seS6KR0Wl8Itp5IMIWFpnNokjRH76RYRZAcx0jP0V5/GfNNTi5QsEU98en0SiXHQGXnROiHpRUDXTl8FmJORjwXc0AjrEMuQ2FDJDmAIlKUSLhjbIiKw3iaqp5TVyXuz0ZMYBhnqhcwqULqtFSuIKpaW8FgF8QJfP2frADf4kKZG1bQ99MrRrb2A="
+_TS_VEC = "9frjpxPjxSNilxJPCJ0XGYs6scej3dW/h/VWlnKUiLSG8IP7mfyDU7NirOlld+VtCKGj03XjetfliDMhIev7wcARo+YTU8KPFuVQP9E2DVXzY2BFo1NhE6qEmPfNDnm74eyl/7iFJ0EETm6XbYyz8IKBkAqPN/Spp3PZ2ulKg3QBSDxcVN4R5zRn7OsgLJ2CNTuWkd/h451lDCp+TtTuvnAEhcQckdsydFhTZCK5IiWrrTIC/d4qDXEd+GtOP4hPdoIuCaNzYfX3lLCwFENC6RZoTBYLrcKVVgbqyQZ7DnLqfLqvf3z0FVUWx9H21liGFpByzdnoxyFkue3NzrFtkRL37xkx9ITucepSYKzUVEfyBh+/3mtzKY26VIRkJFkpf8KVcCRNrTRQn47Wuq4gC7sSwT7eHCAydKSACcUMMdpPSvbvfOmIqeBNA83osX8FPFYUMZsjvYNEE3arbFiGsQlggBKgg1V3oN+5ni3Vjc5InHg/xv476LHDFnNdAJx448ph3DoAiJjr2g4ZTNynfSxdzA68qSuJY8UjyzgDjG0RIMv2h7DlQNjkAXv4k1BrPpfOiOqH67yIarNmkPIwrIV+W9TTV/yRyE1LEgOr4DK8uW2AUtHOPA2gn6P5sgFyi68w55MZBPepddfYTQ+E1N6R/hWnMYPt/i0xSUeMPekX47iucfpFBEv9Uh9zdGiEB+0P3LVMP+q+pbBU4o1NkKyY1V8wH1Wilr0a+q87kEnQ1PDx4Vtw4YF6XfduRwwS6nKZ6sPAC9nCeR+u4woO2g8sw9Y5ze5XMgOVpFCZaut02I5k0U4WPyN5adQjG8sAzxsI3KsV04DEVymj224iqg2Lzz53Xz9yEy+7/85ILQpJ6llCyqpHLFyHq/kJxYPhDUF755WaHJEaFRPxUqbparNX+mCE9Xzy7Q/KTgAPiRS41FHXXv+7XSPp4cy9jli0BVnYf13Xsp28OGs/D8Nl3NgEn3/eUcMN80JRdsOrV62fnBVMBNf36+LbISdvsFAFr0xyuPGmlIETcFyxJkrGZnhHAxwzsvZ+Uwf8lffBfZFPRrNv+tgeeLpatVcHLHZGeTgWWml6tIHwWUqv2TVJeMkAEL5PPS4Gtbscau5HM+FEjtGS+KClfX1CNKvgYJl7mLDEf5ZYQv5kHaoQ6RcPaR6vUNn02zpq5/X3EPIgUKF0r/0EME9M9cSy9FvfHvcx2gMPkp1H5Dj4YaKufPRsAyon8Tf+Il6qNcQwTFj4cNErk4x719Y42NoAnnQYC2/qfL/gAhJl8TKMvBt3Bno+va8ve8E0z8yEuMLUqe8OXLce6nCa+L5LYK1aBdb60BYbMeWk1qmG6Nk9OnYLhzDyrd9iHDd7X95OM6X5wiMVZRn5ebw4askTTc50xmrg4eic2U1w1JpSEjdH/u/hXrWKSMWAxaj34uQnMuWxPZEXoVxzGyuUbroXRfkhzpqmqqqOcypjsWPdq5BOUGL/Riwjm6yMI0x9kbO8+VoQ6RYfjAbxNriZ1cQ+AW1fqEgnRWXmjt4Z1M0ygUBi8w71bDML1YG6UHeC2cJ2CCCxSrfycKQhpSdI1QIuwd2eyIpd4LgwrMiY3xNWreAF+qobNxvE7ypKTISNrz0iYIhU0aKNlcGwYd0FXIRfKVBzSBe4MRK2pGLDNO6ytoHxvJweZ8h1XG8RWc4aB5gTnB7Tjiqym4b64lRdj1DPHJnzD4aqRixpXhzYzWVDN2kONCR5i2quYbnVFN4sSfLiKeOwKX4JdmzpYixNZXjLkG14seS6KR0Wl8Itp5IMIWFpnNokjRH76RYRZAcx0jP0V5/GfNNTi5QsEU98en0SiXHQGXnROiHpRUDXTl8FmJORjwXc0AjrEMuQ2FDJDmAIlKUSLhjbIiKw3iaqp5TVyXuz0ZMYBhnqhcwqULqtFSuIKpaW8FgF8QJfP2frADf4kKZG1bQ99MrRrb2A="
 GEOIP_URL = "https://www.vavoo.tv/geoip"
 
 
@@ -37,7 +38,7 @@ class VavooExtractorError(Exception):
 
 
 class VavooExtractor:
-    """Vavoo resolver sincrono per Enigma2, allineato al source EasyProxy."""
+    """Synchronous Vavoo resolver for Enigma2, aligned with EasyProxy source."""
 
     def __init__(self, request_headers=None):
         self.base_headers = {"User-Agent": "okhttp/4.11.0"}
@@ -48,7 +49,7 @@ class VavooExtractor:
         self._signature_cache = None
         self._signature_time = 0
         self._url_cache = {}
-        enhanced_log("[VAVOO] VavooExtractor inizializzato", "INFO", "VAVOO")
+        enhanced_log("[VAVOO] VavooExtractor initialised", "INFO", "VAVOO")
 
     def _create_session(self):
         if self.session:
@@ -71,7 +72,7 @@ class VavooExtractor:
     def get_cached_signature(self):
         if self._signature_cache and (
                 time.time() - self._signature_time) < 300:
-            enhanced_log("[VAVOO] Signature da cache", "DEBUG", "VAVOO")
+            enhanced_log("[VAVOO] Signature from cache", "DEBUG", "VAVOO")
             return self._signature_cache
 
         signature = self.get_auth_signature()
@@ -156,9 +157,9 @@ class VavooExtractor:
             "accept-encoding": "gzip",
         }
 
-        # EasyProxy/plugin.video.vavooto usano Lokke come auth primaria.
-        # La signature legacy Vavoo puo' risolvere a un flusso promozionale
-        # "scarica lokke.app", quindi va usata solo se Lokke non risponde.
+        # EasyProxy/plugin.video.vavooto use Lokke as primary auth.
+        # The legacy Vavoo signature may resolve to a promotional stream
+        # "download lokke.app", so it should be used only if Lokke does not respond.
         for attempt in range(3):
             try:
                 resp = self.session.post(
@@ -171,15 +172,17 @@ class VavooExtractor:
                     signature = resp.json().get("addonSig")
                     if signature:
                         enhanced_log(
-                            "[VAVOO] Signature lokke ottenuta", "INFO", "VAVOO")
+                            "[VAVOO] Lokke signature obtained", "INFO", "VAVOO")
                         return signature
                 enhanced_log(
-                    "[VAVOO] Lokke HTTP %s" %
-                    resp.status_code, "WARNING", "VAVOO")
+                    "[VAVOO] Lokke HTTP %s" % resp.status_code,
+                    "WARNING",
+                    "VAVOO")
             except Exception as exc:
                 enhanced_log(
-                    "[VAVOO] Errore lokke tentativo %s: %s" %
-                    (attempt + 1, exc), "WARNING", "VAVOO")
+                    "[VAVOO] Lokke error attempt %d: %s" % (attempt + 1, exc),
+                    "WARNING",
+                    "VAVOO")
 
         legacy_payload = {
             "token": "tosFwQCJMS8qrW_AjLoHPQ41646J5dRNha6ZWHnijoYQQQoADQoXYSo7ki7O5-CsgN4CH0uRk6EEoJ0728ar9scCRQW3ZkbfrPfeCXW2VgopSW2FWDqPOoVYIuVPAOnXCZ5g",
@@ -237,21 +240,23 @@ class VavooExtractor:
                     signature = resp.json().get("addonSig")
                     if signature:
                         enhanced_log(
-                            "[VAVOO] Signature vavoo ottenuta", "INFO", "VAVOO")
+                            "[VAVOO] Vavoo signature obtained", "INFO", "VAVOO")
                         return signature
                 enhanced_log(
-                    "[VAVOO] Vavoo ping HTTP %s" %
-                    resp.status_code, "WARNING", "VAVOO")
+                    "[VAVOO] Vavoo ping HTTP %s" % resp.status_code,
+                    "WARNING",
+                    "VAVOO")
             except Exception as exc:
                 enhanced_log(
-                    "[VAVOO] Errore vavoo ping %s: %s" %
-                    (ping_url, exc), "WARNING", "VAVOO")
+                    "[VAVOO] Vavoo ping error %s: %s" % (ping_url, exc),
+                    "WARNING",
+                    "VAVOO")
         return None
 
     def resolve_vavoo_link_cached(self, url):
         cached = self._url_cache.get(url)
         if cached and (time.time() - cached["time"]) < 180:
-            enhanced_log("[VAVOO] URL da cache", "DEBUG", "VAVOO")
+            enhanced_log("[VAVOO] URL from cache", "DEBUG", "VAVOO")
             return cached["url"]
 
         signature = self.get_cached_signature()
@@ -276,8 +281,7 @@ class VavooExtractor:
             resp = self._post_json(_RESOLVE_URL, payload, headers, timeout=18)
             if not resp or resp.status_code != 200:
                 enhanced_log(
-                    "[VAVOO] Resolve HTTP %s" %
-                    (resp.status_code if resp else "none"),
+                    "[VAVOO] Resolve HTTP %s" % (resp.status_code if resp else "none"),
                     "WARNING",
                     "VAVOO")
                 return None
@@ -294,14 +298,15 @@ class VavooExtractor:
                 self._url_cache[url] = {
                     "url": str(resolved_url), "time": time.time()}
                 enhanced_log(
-                    "[VAVOO] URL risolto via mediahubmx",
+                    "[VAVOO] URL resolved via mediahubmx",
                     "INFO",
                     "VAVOO")
                 return str(resolved_url)
         except Exception as exc:
             enhanced_log(
-                "[VAVOO] Errore resolve: %s" %
-                exc, "WARNING", "VAVOO")
+                "[VAVOO] Resolve error: %s" % exc,
+                "WARNING",
+                "VAVOO")
         return None
 
     def get_ts_signature(self):
@@ -322,15 +327,17 @@ class VavooExtractor:
                     signed = resp.json().get("response", {}).get("signed")
                     if signed:
                         enhanced_log(
-                            "[VAVOO] TS signature ottenuta", "INFO", "VAVOO")
+                            "[VAVOO] TS signature obtained", "INFO", "VAVOO")
                         return signed
                 enhanced_log(
-                    "[VAVOO] ping2 HTTP %s" %
-                    resp.status_code, "WARNING", "VAVOO")
+                    "[VAVOO] ping2 HTTP %s" % resp.status_code,
+                    "WARNING",
+                    "VAVOO")
             except Exception as exc:
                 enhanced_log(
-                    "[VAVOO] Errore ping2 tentativo %s: %s" %
-                    (attempt + 1, exc), "WARNING", "VAVOO")
+                    "[VAVOO] ping2 error attempt %d: %s" % (attempt + 1, exc),
+                    "WARNING",
+                    "VAVOO")
         return None
 
     def build_ts_fallback_url(self, play_url, ts_sig):
@@ -340,7 +347,7 @@ class VavooExtractor:
         channel_id = match.group(1)
         if not channel_id.isdigit():
             enhanced_log(
-                "[VAVOO] TS fallback ignorato per ID non numerico",
+                "[VAVOO] TS fallback ignored for non-numeric ID",
                 "WARNING",
                 "VAVOO")
             return None
@@ -361,7 +368,7 @@ class VavooExtractor:
         return self.resolve_vavoo_link_cached(url)
 
     def extract(self, url, headers=None):
-        enhanced_log("[VAVOO] Estrazione: %s..." % url[:100], "INFO", "VAVOO")
+        enhanced_log("[VAVOO] Extraction: %s..." % url[:100], "INFO", "VAVOO")
         if "vavoo.to" not in (url or "").lower():
             return {
                 "resolved_url": url,
@@ -380,7 +387,7 @@ class VavooExtractor:
 
         if not resolved_url:
             enhanced_log(
-                "[VAVOO] Risoluzione fallita, nessun URL riproducibile",
+                "[VAVOO] Resolution failed, no playable URL",
                 "WARNING",
                 "VAVOO")
             return {
@@ -388,7 +395,7 @@ class VavooExtractor:
                 "destination_url": None,
                 "headers": headers or {},
                 "request_headers": headers or {},
-                "m3u8_content": "#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-ENDLIST\n# Vavoo resolver non disponibile\n",
+                "m3u8_content": "#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-ENDLIST\n# Vavoo resolver not available\n",
             }
 
         stream_headers["X-EasyProxy-Disable-SSL"] = "1"
@@ -463,4 +470,4 @@ vavoo_extractor = VavooExtractor()
 vavoo_resolver = VavooResolverNoCache()
 vavoo_resolver.clear_vavoo_cache = lambda x=None: vavoo_resolver.clear_cache(x)
 
-enhanced_log("[VAVOO] Vavoo Extractor caricato", "INFO", "VAVOO")
+enhanced_log("[VAVOO] Vavoo Extractor loaded", "INFO", "VAVOO")

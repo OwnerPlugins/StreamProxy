@@ -1,4 +1,5 @@
-# vix_extractor.py - VixCloud URL extractor per Enigma2
+# -*- coding: utf-8 -*-
+# vix_extractor.py - VixCloud URL extractor for Enigma2
 import json
 import re
 import time
@@ -22,11 +23,11 @@ except (ImportError, ValueError):
         from StreamProxyLog import enhanced_log
     except ImportError:
         def enhanced_log(msg, level="INFO", tag="VIX"):
-            print("[{}] [{}] {}".format(level, tag, msg))
+            print("[%s] [%s] %s" % (level, tag, msg))
 
 
 class VixCloudExtractor:
-    """VixCloud/VixSrc HLS extractor per Enigma2."""
+    """VixCloud/VixSrc HLS extractor for Enigma2."""
 
     def __init__(self):
         self.base_headers = {
@@ -60,19 +61,20 @@ class VixCloudExtractor:
             self.session.mount("https://", adapter)
 
     def extract(self, url):
-        """Estrae la master playlist HLS da window.masterPlaylist."""
+        """Extract the master HLS playlist from window.masterPlaylist."""
         enhanced_log(
-            "[VIX] START extract kotlin-style: {}...".format(url[:80]), "INFO", "VIX")
+            "[VIX] START extract kotlin-style: %s..." % url[:80],
+            "INFO",
+            "VIX")
 
         try:
             clean_url = self._normalise_url(url)
             parsed_url = urlparse(clean_url)
 
-            # Compatibilita': se l'URL e' gia' una playlist diretta, non va
-            # risolto.
+            # Compatibility: if the URL is already a direct playlist, do not resolve.
             if "/playlist/" in parsed_url.path:
                 enhanced_log(
-                    "[VIX] URL gia' risolto - passthrough diretto",
+                    "[VIX] URL already resolved - direct passthrough",
                     "INFO",
                     "VIX")
                 return {
@@ -89,13 +91,14 @@ class VixCloudExtractor:
 
             html = response.text
             enhanced_log(
-                "[VIX] Contenuto pagina: {} caratteri".format(
-                    len(html)), "DEBUG", "VIX")
+                "[VIX] Page content: %d characters" % len(html),
+                "DEBUG",
+                "VIX")
 
             script = self._find_playlist_script(html)
             if not script:
                 enhanced_log(
-                    "[VIX] Nessuno script playlist trovato",
+                    "[VIX] No playlist script found",
                     "WARNING",
                     "VIX")
                 return None
@@ -103,13 +106,15 @@ class VixCloudExtractor:
             final_url = self._extract_playlist_from_embed(script)
             if not final_url:
                 enhanced_log(
-                    "[VIX] Parametri playlist mancanti o incompleti",
+                    "[VIX] Missing or incomplete playlist parameters",
                     "WARNING",
                     "VIX")
                 return None
 
-            enhanced_log("[VIX] SUCCESS kotlin exact: {}...".format(
-                final_url[:120]), "INFO", "VIX")
+            enhanced_log(
+                "[VIX] SUCCESS kotlin exact: %s..." % final_url[:120],
+                "INFO",
+                "VIX")
             return {
                 "resolved_url": final_url,
                 "destination_url": final_url,
@@ -120,7 +125,7 @@ class VixCloudExtractor:
 
         except Exception as e:
             enhanced_log(
-                "[VIX] VixCloud extraction error: {}".format(e),
+                "[VIX] VixCloud extraction error: %s" % e,
                 "ERROR",
                 "VIX")
             return None
@@ -139,7 +144,7 @@ class VixCloudExtractor:
         parsed = urlparse(url)
         if not parsed.scheme or not parsed.netloc:
             return None
-        return "{}://{}".format(parsed.scheme, parsed.netloc)
+        return "%s://%s" % (parsed.scheme, parsed.netloc)
 
     def _request(
             self,
@@ -154,7 +159,7 @@ class VixCloudExtractor:
         for attempt in range(retries):
             try:
                 enhanced_log(
-                    "[VIX] GET tentativo {}/{} {}...".format(attempt + 1, retries, url[:120]),
+                    "[VIX] GET attempt %d/%d %s..." % (attempt + 1, retries, url[:120]),
                     "DEBUG",
                     "VIX",
                 )
@@ -167,22 +172,26 @@ class VixCloudExtractor:
                 if response.status_code == 200:
                     return response
 
-                last_error = "HTTP {}".format(response.status_code)
-                enhanced_log("[VIX] Errore HTTP {} su {}".format(
-                    response.status_code, url[:80]), "WARNING", "VIX", )
+                last_error = "HTTP %s" % response.status_code
+                enhanced_log(
+                    "[VIX] HTTP error %s on %s" % (response.status_code, url[:80]),
+                    "WARNING",
+                    "VIX")
                 if response.status_code == 404:
                     return None
 
             except Exception as e:
                 last_error = e
-                enhanced_log("[VIX] Errore connessione tentativo {} su {}: {}".format(
-                    attempt + 1, url[:80], e), "WARNING", "VIX", )
+                enhanced_log(
+                    "[VIX] Connection error attempt %d on %s: %s" % (attempt + 1, url[:80], e),
+                    "WARNING",
+                    "VIX")
 
             if attempt < retries - 1:
                 time.sleep(initial_delay * (2 ** attempt))
 
         enhanced_log(
-            "[VIX] Richiesta fallita: {}".format(last_error),
+            "[VIX] Request failed: %s" % last_error,
             "ERROR",
             "VIX")
         return None
@@ -201,8 +210,8 @@ class VixCloudExtractor:
         now_ts = int(time.time())
         if expires_ts <= now_ts:
             raise ValueError(
-                "Expired VixSrc embed URL (expired at {}, current {}). "
-                "Use original /movie/ or /tv/ URL to refresh tokens.".format(expires_ts, now_ts)
+                "Expired VixSrc embed URL (expired at %d, current %d). "
+                "Use original /movie/ or /tv/ URL to refresh tokens." % (expires_ts, now_ts)
             )
 
     def _resolve_to_embed_response(self, url, parsed_url):
@@ -225,7 +234,7 @@ class VixCloudExtractor:
             iframe_src = self._find_iframe_src(response.text)
             if not iframe_src:
                 enhanced_log(
-                    "[VIX] Nessun iframe trovato nella risposta",
+                    "[VIX] No iframe found in response",
                     "WARNING",
                     "VIX")
                 return None
@@ -254,9 +263,9 @@ class VixCloudExtractor:
             part for part in parsed.path.strip("/").split("/") if part]
         api_url = None
         if len(path_parts) >= 2 and path_parts[0] == "movie":
-            api_url = "{}/api/movie/{}".format(site_url, path_parts[1])
+            api_url = "%s/api/movie/%s" % (site_url, path_parts[1])
         elif len(path_parts) >= 4 and path_parts[0] == "tv":
-            api_url = "{}/api/tv/{}/{}/{}".format(
+            api_url = "%s/api/tv/%s/%s/%s" % (
                 site_url, path_parts[1], path_parts[2], path_parts[3])
 
         if not api_url:
@@ -271,20 +280,20 @@ class VixCloudExtractor:
             payload = json.loads(response.text)
         except ValueError as e:
             enhanced_log(
-                "[VIX] Risposta API non JSON: {}".format(e),
+                "[VIX] Non-JSON API response: %s" % e,
                 "WARNING",
                 "VIX")
             return None
 
         embed_path = payload.get("src")
         if not embed_path:
-            enhanced_log("[VIX] API senza campo src", "WARNING", "VIX")
+            enhanced_log("[VIX] API without src field", "WARNING", "VIX")
             return None
         return urljoin(site_url, embed_path)
 
     def _version(self, site_url):
         response = self._request(
-            "{}/request-a-title".format(site_url),
+            "%s/request-a-title" % site_url,
             headers=self._fresh_headers(
                 Referer=site_url + "/",
                 Origin=site_url),
@@ -300,7 +309,7 @@ class VixCloudExtractor:
             data = json.loads(data_page.replace("&quot;", '"'))
             return data["version"]
         except (KeyError, ValueError, AttributeError) as e:
-            raise ValueError("Version parsing failure: {}".format(e))
+            raise ValueError("Version parsing failure: %s" % e)
 
     def _find_app_data_page(self, html):
         match = re.search(
@@ -344,13 +353,13 @@ class VixCloudExtractor:
                 return final_url
 
         enhanced_log(
-            "[VIX] Uso fallback legacy token/expires/url",
+            "[VIX] Using legacy token/expires/url fallback",
             "DEBUG",
             "VIX")
         return self._build_from_legacy_script(script)
 
     def _build_from_master_playlist_regex(self, script):
-        """Parsing primario allineato al source EasyProxy aggiornato."""
+        """Primary parsing aligned with the updated EasyProxy source."""
         master_playlist_match = re.search(
             r"window\.masterPlaylist\s*=\s*\{.*?params\s*:\s*\{(?P<params>.*?)\}\s*,\s*url\s*:\s*['\"](?P<url>[^'\"]+)['\"]",
             script,
@@ -393,7 +402,7 @@ class VixCloudExtractor:
 
         if not keys or len(keys) != len(parts):
             enhanced_log(
-                "[VIX] Key/parts mismatch: keys={} parts={}".format(len(keys), len(parts)),
+                "[VIX] Key/parts mismatch: keys=%d parts=%d" % (len(keys), len(parts)),
                 "WARNING",
                 "VIX",
             )
@@ -406,7 +415,7 @@ class VixCloudExtractor:
             cleaned = cleaned.replace(";", "")
             cleaned = re.sub(r"(\{|\[|,)\s*(\w+)\s*:", r'\1 "\2":', cleaned)
             cleaned = re.sub(r",(\s*[}\]])", r"\1", cleaned).strip()
-            json_objects.append('"{}": {}'.format(key, cleaned))
+            json_objects.append('"%s": %s' % (key, cleaned))
 
         aggregated = "{\n" + ",\n".join(json_objects) + "\n}"
         aggregated = aggregated.replace("'", '"').replace("\\/", "/")
@@ -414,8 +423,10 @@ class VixCloudExtractor:
         try:
             return json.loads(aggregated)
         except Exception as e:
-            enhanced_log("[VIX] JSON parse fail: {}; payload={}".format(
-                e, aggregated[:160]), "WARNING", "VIX", )
+            enhanced_log(
+                "[VIX] JSON parse fail: %s; payload=%s" % (e, aggregated[:160]),
+                "WARNING",
+                "VIX")
             return None
 
     def _build_from_master_playlist_object(self, parsed, script=None):
@@ -516,5 +527,5 @@ class VixCloudExtractor:
             pass
 
 
-# Istanza globale
+# Global instance
 vix_extractor = VixCloudExtractor()

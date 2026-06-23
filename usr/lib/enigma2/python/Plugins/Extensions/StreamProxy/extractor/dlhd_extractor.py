@@ -1,5 +1,6 @@
-# dlhd_extractor.py - DLHD Extractor per Enigma2 basato su EasyProxy
-# Riscritto completamente seguendo il processo del sorgente originale
+# -*- coding: utf-8 -*-
+# dlhd_extractor.py - DLHD Extractor for Enigma2 based on EasyProxy
+# Completely rewritten following the original source process
 
 import re
 import json
@@ -11,7 +12,7 @@ import string
 import threading
 import importlib.util
 from urllib.parse import urlparse, urljoin
-from typing import Dict, Any, Optional, List
+
 
 try:
     import requests
@@ -44,14 +45,13 @@ def _load_local_module(module_name, relative_path):
         relative_path)
     spec = importlib.util.spec_from_file_location(module_name, module_path)
     if not spec or not spec.loader:
-        raise ImportError("Impossibile caricare {}".format(relative_path))
+        raise ImportError("Unable to load %s" % relative_path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
 
 
-# Import utilities: caricate da file per evitare conflitto con utils.py
-# nella root.
+# Import utilities: loaded from file to avoid conflict with utils.py in root.
 try:
     packed_module = _load_local_module(
         "streamproxy_utils_packed", os.path.join(
@@ -64,18 +64,24 @@ try:
     UnpackingError = packed_module.UnpackingError
     DRMHandler = drm_module.DRMHandler
 except ImportError:
-    # Fallback se utils non disponibili sul decoder.
-    def detect(source): return False
-    def unpack(source): return source
+    # Fallback if utils are not available on the decoder.
+    def detect(source):
+        return False
+
+    def unpack(source):
+        return source
 
     class UnpackingError(Exception):
         pass
 
     class DRMHandler:
-        def __init__(self): pass
-        def has_crypto(self): return False
+        def __init__(self):
+            pass
 
-# Import enhanced_log per integrazione con StreamProxy
+        def has_crypto(self):
+            return False
+
+# Import enhanced_log for StreamProxy integration
 try:
     from ..StreamProxyLog import enhanced_log
 except (ImportError, ValueError):
@@ -83,35 +89,35 @@ except (ImportError, ValueError):
         from StreamProxyLog import enhanced_log
     except ImportError:
         def enhanced_log(msg, level="INFO", tag="DLHD"):
-            print(f"[{level}] [{tag}] {msg}")
+            print("[%s] [%s] %s" % (level, tag, msg))
 
 
 class DLHDExtractorError(Exception):
-    """Eccezione specifica per errori DLHD"""
+    """Specific exception for DLHD errors."""
     pass
 
 
 class DLHDExtractor:
     """
-    DLHD Extractor per Enigma2 - Riscritto seguendo EasyProxy
+    DLHD Extractor for Enigma2 - Rewritten following EasyProxy
 
-    PROCESSO COMPLETO:
-    1. Carica configurazione dinamica da worker remoto
-    2. Estrae parametri auth dall'iframe
-    3. Esegue POST auth con parametri estratti
-    4. Effettua server lookup per ottenere server_key
-    5. Invia heartbeat per stabilire sessione
-    6. Costruisce URL stream finale con template dinamici
-    7. Gestisce cache con validazione TTL
+    COMPLETE PROCESS:
+    1. Load dynamic configuration from remote worker
+    2. Extract auth parameters from iframe
+    3. Perform POST auth with extracted parameters
+    4. Perform server lookup to obtain server_key
+    5. Send heartbeat to establish session
+    6. Build final stream URL with dynamic templates
+    7. Handle cache with TTL validation
     """
 
     def __init__(self, request_headers=None):
         enhanced_log(
-            f"[INIT] Inizializzazione DLHDExtractor per Enigma2 ({DLHD_EXTRACTOR_PATCH_VERSION})",
+            "[INIT] Initialising DLHDExtractor for Enigma2 (%s)" % DLHD_EXTRACTOR_PATCH_VERSION,
             "INFO",
             "DLHD")
 
-        # Headers base anti-bot
+        # Base anti-bot headers
         self.user_agents = [
             'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36',
             'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36',
@@ -129,15 +135,14 @@ class DLHDExtractor:
         if request_headers:
             self.base_headers.update(request_headers)
 
-        # Carica configurazione proxy
+        # Load proxy configuration
         self.proxies = self._load_proxy_config()
 
-        # Sessione HTTP persistente
+        # Persistent HTTP session
         if REQUESTS_AVAILABLE:
             self.session = requests.Session()
 
-            # Retry strategy compatibile anche con urllib3 vecchi dei firmware
-            # Enigma2.
+            # Retry strategy compatible with older Enigma2 firmware urllib3
             retry_kwargs = dict(
                 total=0,
                 connect=0,
@@ -168,15 +173,15 @@ class DLHDExtractor:
             self.session.headers.update(self.base_headers)
             self.session.verify = False
 
-            enhanced_log("[INIT] Sessione HTTP configurata", "DEBUG", "DLHD")
+            enhanced_log("[INIT] HTTP session configured", "DEBUG", "DLHD")
         else:
             self.session = None
             enhanced_log(
-                "[INIT] Modulo requests non disponibile",
+                "[INIT] Requests module not available",
                 "WARNING",
                 "DLHD")
 
-        # Cache e configurazione
+        # Cache and configuration
         self.cache_file = '/tmp/.dlhd_cache_enigma2' if os.path.exists(
             '/tmp') else '.dlhd_cache_enigma2'
         cache_data = self._load_cache()
@@ -184,10 +189,10 @@ class DLHDExtractor:
         # Stream cache
         self._stream_cache = cache_data.get('streams', {})
 
-        # Lista iframe hosts (caricata da cache o fallback)
+        # List of iframe hosts (loaded from cache or fallback)
         self.iframe_hosts = cache_data.get('hosts', [])
 
-        # Configurazione server dinamica dal worker (TEMPLATE completi come
+        # Dynamic server configuration from worker (full TEMPLATES like
         # EasyProxy)
         self.auth_url = cache_data.get(
             'auth_url', 'https://security.kiko2.ru/auth2.php')
@@ -203,9 +208,8 @@ class DLHDExtractor:
             'server_lookup_url', 'https://chevy.kiko2.ru/server_lookup')
         self.base_domain = cache_data.get('base_domain', 'kiko2.ru')
 
-        # Nuovo processo DLStreams: entry origin stabile, stream origin scoperto runtime.
-        # Su Enigma2 non usiamo Playwright/aiohttp, ma manteniamo la stessa
-        # logica URL/header.
+        # New DLStreams process: stable entry origin, stream origin discovered at runtime.
+        # On Enigma2 we don't use Playwright/aiohttp, but maintain the same URL/header logic.
         self.entry_origin = DLSTREAMS_ENTRY_ORIGIN
         self.stream_origin = cache_data.get('stream_origin', self.entry_origin)
         self.mediaflow_endpoint = "hls_manifest_proxy"
@@ -213,7 +217,7 @@ class DLHDExtractor:
         self._last_working_player = cache_data.get('last_working_player', {})
         self._captured_cookies = []
 
-        # Host fallback noti funzionanti
+        # Known working fallback hosts
         self.fallback_hosts = [
             'tigertestxtg.sbs',
             'epicplayplay.cfd',
@@ -222,10 +226,10 @@ class DLHDExtractor:
             'iframe3.kiko2.ru'
         ]
 
-        # Inizializza hosts se vuoti
+        # Initialise hosts if empty
         if not self.iframe_hosts:
             enhanced_log(
-                "[INIT] Lista host vuota, carico fallback",
+                "[INIT] Host list empty, loading fallback",
                 "INFO",
                 "DLHD")
             self.iframe_hosts = self.fallback_hosts.copy()
@@ -237,11 +241,11 @@ class DLHDExtractor:
         # DRM handler
         self.drm_handler = DRMHandler()
 
-        # Lock per thread safety
+        # Lock for thread safety
         self._extraction_locks = {}
         self._config_refreshed = False
 
-        # Statistiche
+        # Statistics
         self.stats = {
             'requests': 0,
             'cache_hits': 0,
@@ -250,22 +254,18 @@ class DLHDExtractor:
         }
 
         enhanced_log(
-            f"[INIT] Cache caricata: {
-                len(
-                    self._stream_cache)} streams, {
-                len(
-                    self.iframe_hosts)} hosts",
+            "[INIT] Cache loaded: %d streams, %d hosts" % (
+                len(self._stream_cache), len(self.iframe_hosts)),
             "INFO",
             "DLHD")
-        enhanced_log(f"[INIT] Auth URL: {self.auth_url}", "DEBUG", "DLHD")
+        enhanced_log("[INIT] Auth URL: %s" % self.auth_url, "DEBUG", "DLHD")
         enhanced_log(
-            f"[INIT] Base Domain: {
-                self.base_domain}",
+            "[INIT] Base Domain: %s" % self.base_domain,
             "DEBUG",
             "DLHD")
 
     def _load_proxy_config(self):
-        """Carica configurazione proxy da SPconfig.txt"""
+        """Load proxy configuration from SPconfig.txt."""
         try:
             config_paths = [
                 '/usr/lib/enigma2/python/Plugins/Extensions/StreamProxy/SPconfig.txt',
@@ -274,28 +274,32 @@ class DLHDExtractor:
             for path in config_paths:
                 if os.path.exists(path):
                     enhanced_log(
-                        f"[PROXY] File config trovato: {path}", "DEBUG", "DLHD")
+                        "[PROXY] Config file found: %s" % path,
+                        "DEBUG",
+                        "DLHD")
                     with open(path, 'r') as f:
                         config = json.load(f)
                         daddy_proxy = config.get(
                             'DADDY_PROXY') or config.get('PROXY')
                         if daddy_proxy:
                             enhanced_log(
-                                "[PROXY] Proxy configurato", "INFO", "DLHD")
-                            proxy_url = f'http://{daddy_proxy}' if not daddy_proxy.startswith(
+                                "[PROXY] Proxy configured",
+                                "INFO",
+                                "DLHD")
+                            proxy_url = 'http://%s' % daddy_proxy if not daddy_proxy.startswith(
                                 'http') else daddy_proxy
                             return {
                                 'http': proxy_url,
                                 'https': proxy_url
                             }
         except Exception as e:
-            enhanced_log(f"[PROXY] Errore caricamento: {e}", "ERROR", "DLHD")
+            enhanced_log("[PROXY] Loading error: %s" % e, "ERROR", "DLHD")
         return None
 
     def _http_request(self, method, url, headers=None, timeout=8, **kwargs):
-        """Richiesta HTTP sincrona con retry leggero, pensata per Enigma2."""
+        """Synchronous HTTP request with light retry, designed for Enigma2."""
         if not self.session:
-            raise DLHDExtractorError("Sessione HTTP non disponibile")
+            raise DLHDExtractorError("HTTP session not available")
 
         request_headers = dict(self.base_headers)
         if headers:
@@ -329,20 +333,24 @@ class DLHDExtractor:
                     return response
 
                 enhanced_log(
-                    f"[HTTP] HTTP {response.status_code}, retry: {url[:90]}", "DEBUG", "DLHD")
-                last_error = DLHDExtractorError(f"HTTP {response.status_code}")
+                    "[HTTP] HTTP %s, retry: %s" % (response.status_code, url[:90]),
+                    "DEBUG",
+                    "DLHD")
+                last_error = DLHDExtractorError("HTTP %s" % response.status_code)
                 time.sleep(0.25)
             except Exception as exc:
                 last_error = exc
                 enhanced_log(
-                    f"[HTTP] Errore {method} {url[:90]}: {exc}", "DEBUG", "DLHD")
+                    "[HTTP] Error %s %s: %s" % (method, url[:90], exc),
+                    "DEBUG",
+                    "DLHD")
                 if attempt:
                     break
                 time.sleep(0.25)
 
         if last_error:
             raise last_error
-        raise DLHDExtractorError("Richiesta HTTP fallita")
+        raise DLHDExtractorError("HTTP request failed")
 
     def _http_get(self, url, headers=None, timeout=8, **kwargs):
         return self._http_request(
@@ -361,7 +369,7 @@ class DLHDExtractor:
             **kwargs)
 
     def _load_cache(self):
-        """Carica cache da file Base64 (come EasyProxy)"""
+        """Load cache from Base64 file (like EasyProxy)."""
         try:
             if os.path.exists(self.cache_file):
                 with open(self.cache_file, 'r', encoding='utf-8') as f:
@@ -374,7 +382,7 @@ class DLHDExtractor:
                             encoded_data).decode('utf-8')
                         data = json.loads(decoded_data)
 
-                        # Pulizia cache vecchia (> 24h)
+                        # Clean old cache (> 24h)
                         current_time = time.time()
                         if 'streams' in data:
                             old_keys = []
@@ -390,11 +398,11 @@ class DLHDExtractor:
                     except Exception:
                         return {'hosts': [], 'streams': {}}
         except Exception as e:
-            enhanced_log(f"[CACHE] Errore caricamento: {e}", "ERROR", "DLHD")
+            enhanced_log("[CACHE] Loading error: %s" % e, "ERROR", "DLHD")
         return {'hosts': [], 'streams': {}}
 
     def _save_cache(self):
-        """Salva cache su file Base64 (come EasyProxy)"""
+        """Save cache to Base64 file (like EasyProxy)."""
         try:
             with open(self.cache_file, 'w', encoding='utf-8') as f:
                 cache_data = {
@@ -420,16 +428,16 @@ class DLHDExtractor:
                     json_data.encode('utf-8')).decode('utf-8')
                 f.write(encoded_data)
         except Exception as e:
-            enhanced_log(f"[CACHE] Errore salvataggio: {e}", "ERROR", "DLHD")
+            enhanced_log("[CACHE] Saving error: %s" % e, "ERROR", "DLHD")
 
     def _fetch_iframe_hosts(self):
-        """Scarica lista aggiornata degli host iframe (come EasyProxy)"""
-        # URL offuscato per evitare scraping statico
-        encoded_url = "aHR0cHM6Ly9pZnJhbWUuZGxoZC5kcGRucy5vcmcv"
+        """Fetch updated list of iframe hosts (like EasyProxy)."""
+        # Obfuscated URL to avoid static scraping
+        encoded_url = "aHR0cHMUXCECymcBNPFUbAvV9hpFfcfGReZUP8p4"
         url = base64.b64decode(encoded_url).decode('utf-8')
 
         enhanced_log(
-            "[HOSTS] Aggiornamento lista iframe hosts",
+            "[HOSTS] Updating iframe hosts list",
             "INFO",
             "DLHD")
 
@@ -438,48 +446,61 @@ class DLHDExtractor:
             if resp.status_code == 200:
                 text = resp.text
 
-                # Validazione contenuto
+                # Content validation
                 if len(text) < 50 or 'error' in text.lower():
                     enhanced_log(
-                        "[HOSTS] Contenuto sospetto", "WARNING", "DLHD")
+                        "[HOSTS] Suspicious content",
+                        "WARNING",
+                        "DLHD")
                     return False
 
                 lines = [line.strip()
                          for line in text.splitlines() if line.strip()]
                 new_hosts = []
 
-                # Parsing con supporto per configurazione completa (come
-                # EasyProxy)
+                # Parsing with support for full configuration (like EasyProxy)
                 for line in lines:
                     if line.startswith('#AUTH_URL:'):
                         self.auth_url = line.replace('#AUTH_URL:', '').strip()
                         enhanced_log(
-                            "[HOSTS] Auth URL aggiornato", "INFO", "DLHD")
+                            "[HOSTS] Auth URL updated",
+                            "INFO",
+                            "DLHD")
                     elif line.startswith('#STREAM_CDN_TEMPLATE:'):
                         self.stream_cdn_template = line.replace(
                             '#STREAM_CDN_TEMPLATE:', '').strip()
                         enhanced_log(
-                            "[HOSTS] Stream CDN Template aggiornato", "INFO", "DLHD")
+                            "[HOSTS] Stream CDN Template updated",
+                            "INFO",
+                            "DLHD")
                     elif line.startswith('#STREAM_OTHER_TEMPLATE:'):
                         self.stream_other_template = line.replace(
                             '#STREAM_OTHER_TEMPLATE:', '').strip()
                         enhanced_log(
-                            "[HOSTS] Stream Other Template aggiornato", "INFO", "DLHD")
+                            "[HOSTS] Stream Other Template updated",
+                            "INFO",
+                            "DLHD")
                     elif line.startswith('#HEARTBEAT_URL:'):
                         self.heartbeat_url = line.replace(
                             '#HEARTBEAT_URL:', '').strip()
                         enhanced_log(
-                            "[HOSTS] Heartbeat URL aggiornato", "INFO", "DLHD")
+                            "[HOSTS] Heartbeat URL updated",
+                            "INFO",
+                            "DLHD")
                     elif line.startswith('#SERVER_LOOKUP_URL:'):
                         self.server_lookup_url = line.replace(
                             '#SERVER_LOOKUP_URL:', '').strip()
                         enhanced_log(
-                            "[HOSTS] Server Lookup URL aggiornato", "INFO", "DLHD")
+                            "[HOSTS] Server Lookup URL updated",
+                            "INFO",
+                            "DLHD")
                     elif line.startswith('#BASE_DOMAIN:'):
                         self.base_domain = line.replace(
                             '#BASE_DOMAIN:', '').strip()
                         enhanced_log(
-                            "[HOSTS] Base Domain aggiornato", "INFO", "DLHD")
+                            "[HOSTS] Base Domain updated",
+                            "INFO",
+                            "DLHD")
                     elif not line.startswith('#'):
                         clean_host = line.strip()
                         if self._validate_host(clean_host):
@@ -488,28 +509,29 @@ class DLHDExtractor:
                 if new_hosts:
                     self.iframe_hosts = new_hosts
                     enhanced_log(
-                        f"[HOSTS] Lista aggiornata: {len(self.iframe_hosts)} hosts", "INFO", "DLHD")
+                        "[HOSTS] List updated: %d hosts" % len(self.iframe_hosts),
+                        "INFO",
+                        "DLHD")
                     self._save_cache()
                     return True
                 else:
                     enhanced_log(
-                        "[HOSTS] Nessun host valido trovato",
+                        "[HOSTS] No valid hosts found",
                         "WARNING",
                         "DLHD")
             else:
                 enhanced_log(
-                    f"[HOSTS] HTTP {
-                        resp.status_code}",
+                    "[HOSTS] HTTP %s" % resp.status_code,
                     "ERROR",
                     "DLHD")
 
         except Exception as e:
-            enhanced_log(f"[HOSTS] Errore: {e}", "ERROR", "DLHD")
+            enhanced_log("[HOSTS] Error: %s" % e, "ERROR", "DLHD")
 
         return False
 
     def _validate_host(self, host):
-        """Valida un host iframe"""
+        """Validate an iframe host."""
         if not host or len(host) < 5:
             return False
         if '.' not in host:
@@ -519,7 +541,7 @@ class DLHDExtractor:
         return True
 
     def _validate_cache(self, channel_id):
-        """Valida cache con controllo TTL e HEAD request (come EasyProxy)"""
+        """Validate cache with TTL check and HEAD request (like EasyProxy)."""
         if channel_id not in self._stream_cache:
             return False
 
@@ -529,7 +551,7 @@ class DLHDExtractor:
             try:
                 if time.time() > (float(expires_at) - 30):
                     enhanced_log(
-                        f"[CACHE_VALIDATE] Token in scadenza per {channel_id}",
+                        "[CACHE_VALIDATE] Token expiring for %s" % channel_id,
                         "INFO",
                         "DLHD")
                     del self._stream_cache[channel_id]
@@ -537,50 +559,50 @@ class DLHDExtractor:
             except (TypeError, ValueError):
                 pass
 
-        # ✅ CORREZIONE: TTL ridotto a 30 minuti per evitare cache stale
+        # FIX: Reduced TTL to 30 minutes to avoid stale cache
         if 'timestamp' in cached:
             try:
                 ts = float(cached['timestamp'])
-                if time.time() - ts > 1800:  # 30 min invece di 2h
+                if time.time() - ts > 1800:  # 30 min instead of 2h
                     enhanced_log(
-                        f"[CACHE_VALIDATE] Cache scaduta per {channel_id}",
+                        "[CACHE_VALIDATE] Cache expired for %s" % channel_id,
                         "WARNING",
                         "DLHD")
                     del self._stream_cache[channel_id]
                     return False
             except (TypeError, ValueError):
                 enhanced_log(
-                    f"[CACHE_VALIDATE] Timestamp invalido per {channel_id}",
+                    "[CACHE_VALIDATE] Invalid timestamp for %s" % channel_id,
                     "WARNING",
                     "DLHD")
                 del self._stream_cache[channel_id]
                 return False
 
-        # ✅ CORREZIONE: Invalida cache se contiene segmenti non-video
+        # FIX: Invalidate cache if it contains non-video segments
         stream_url = cached.get('destination_url', '')
         if 'mono.css' in stream_url:
             if cached.get('dlstreams_process') and time.time() - \
                     cached.get('timestamp', 0) <= 3:
                 enhanced_log(
-                    f"[CACHE_VALIDATE] Micro-cache DLStreams valida per {channel_id}",
+                    "[CACHE_VALIDATE] DLStreams micro-cache valid for %s" % channel_id,
                     "DEBUG",
                     "DLHD")
                 return True
             enhanced_log(
-                f"[CACHE_VALIDATE] Cache DLStreams scaduta per {channel_id}",
+                "[CACHE_VALIDATE] DLStreams cache expired for %s" % channel_id,
                 "DEBUG",
                 "DLHD")
             del self._stream_cache[channel_id]
             return False
 
         enhanced_log(
-            f"[CACHE_VALIDATE] Cache valida per {channel_id}",
+            "[CACHE_VALIDATE] Cache valid for %s" % channel_id,
             "DEBUG",
             "DLHD")
         return True
 
     def extract_channel_id(self, url):
-        """Estrae channel ID da URL (come EasyProxy)"""
+        """Extract channel ID from URL (like EasyProxy)."""
         patterns = [
             r'/premium(\d+)/mono',
             r'(?:id=|premium)(\d+)',
@@ -596,16 +618,16 @@ class DLHDExtractor:
             if match:
                 channel_id = match.group(1)
                 enhanced_log(
-                    f"[CHANNEL_ID] Estratto: {channel_id}",
+                    "[CHANNEL_ID] Extracted: %s" % channel_id,
                     "DEBUG",
                     "DLHD")
                 return channel_id
 
-        enhanced_log("[CHANNEL_ID] Non trovato", "ERROR", "DLHD")
+        enhanced_log("[CHANNEL_ID] Not found", "ERROR", "DLHD")
         return None
 
     def is_daddylive_link(self, url):
-        """Verifica se è un link DaddyLive"""
+        """Check if it is a DaddyLive link."""
         url_lower = url.lower()
         is_daddy = any(
             d in url_lower for d in [
@@ -617,23 +639,23 @@ class DLHDExtractor:
                 r'watch\.php\?id=\d+',
                 url_lower))
         if is_daddy:
-            enhanced_log("[IS_DADDY] Link DaddyLive rilevato", "DEBUG", "DLHD")
+            enhanced_log("[IS_DADDY] DaddyLive link detected", "DEBUG", "DLHD")
         return is_daddy
 
     @staticmethod
     def _origin_of(url):
         parsed = urlparse(url)
-        return f"{parsed.scheme}://{parsed.netloc}"
+        return "%s://%s" % (parsed.scheme, parsed.netloc)
 
     def _build_player_urls(self, channel_id):
         origin = self.entry_origin.rstrip("/")
         return [
-            f"{origin}/stream/stream-{channel_id}.php",
-            f"{origin}/cast/stream-{channel_id}.php",
-            f"{origin}/watch/stream-{channel_id}.php",
-            f"{origin}/plus/stream-{channel_id}.php",
-            f"{origin}/casting/stream-{channel_id}.php",
-            f"{origin}/player/stream-{channel_id}.php",
+            "%s/stream/stream-%s.php" % (origin, channel_id),
+            "%s/cast/stream-%s.php" % (origin, channel_id),
+            "%s/watch/stream-%s.php" % (origin, channel_id),
+            "%s/plus/stream-%s.php" % (origin, channel_id),
+            "%s/casting/stream-%s.php" % (origin, channel_id),
+            "%s/player/stream-%s.php" % (origin, channel_id),
         ]
 
     def _prioritize_player_urls(self, channel_id):
@@ -649,7 +671,7 @@ class DLHDExtractor:
 
     def _clear_channel_cache(self, channel_id):
         self._last_working_player.pop(channel_id, None)
-        self._manifest_cache.pop(f"premium{channel_id}", None)
+        self._manifest_cache.pop("premium%s" % channel_id, None)
         self._stream_cache.pop(channel_id, None)
 
     def _get_cookie_header_for_url(self, url):
@@ -677,12 +699,14 @@ class DLHDExtractor:
             resp = self._http_get(
                 player_url, headers=warmup_headers, timeout=5)
             enhanced_log(
-                f"[DLSTREAMS] Warm-up {player_url}: HTTP {resp.status_code}", "DEBUG", "DLHD")
+                "[DLSTREAMS] Warm-up %s: HTTP %s" % (player_url, resp.status_code),
+                "DEBUG",
+                "DLHD")
             if resp.status_code == 200:
                 return resp.text
         except Exception as exc:
             enhanced_log(
-                f"[DLSTREAMS] Warm-up fallito per {player_url}: {exc}",
+                "[DLSTREAMS] Warm-up failed for %s: %s" % (player_url, exc),
                 "DEBUG",
                 "DLHD")
         return None
@@ -692,10 +716,10 @@ class DLHDExtractor:
             lookup_base,
             channel_key,
             referer_origin):
-        lookup_url = f"{
-            lookup_base.rstrip('/')}/server_lookup?channel_id={channel_key}"
+        lookup_url = "%s/server_lookup?channel_id=%s" % (
+            lookup_base.rstrip('/'), channel_key)
         headers = {
-            "Referer": f"{referer_origin.rstrip('/')}/",
+            "Referer": "%s/" % referer_origin.rstrip('/'),
             "User-Agent": self.base_headers.get("User-Agent", random.choice(self.user_agents)),
             "Accept": "application/json, text/plain, */*",
         }
@@ -706,14 +730,17 @@ class DLHDExtractor:
                 key = data.get("server_key", "wind")
                 if isinstance(key, str) and key:
                     enhanced_log(
-                        f"[DLSTREAMS] server_key: {key}", "DEBUG", "DLHD")
+                        "[DLSTREAMS] server_key: %s" % key,
+                        "DEBUG",
+                        "DLHD")
                     return key
             enhanced_log(
-                f"[DLSTREAMS] server_lookup HTTP {
-                    resp.status_code}", "DEBUG", "DLHD")
+                "[DLSTREAMS] server_lookup HTTP %s" % resp.status_code,
+                "DEBUG",
+                "DLHD")
         except Exception as exc:
             enhanced_log(
-                f"[DLSTREAMS] server_lookup fallito: {exc}",
+                "[DLSTREAMS] server_lookup failed: %s" % exc,
                 "DEBUG",
                 "DLHD")
         return None
@@ -726,25 +753,28 @@ class DLHDExtractor:
                 if self._is_valid_media_manifest(text, url):
                     self.stream_origin = self._origin_of(url)
                     enhanced_log(
-                        f"[DLSTREAMS] Manifest diretto valido: {url}", "INFO", "DLHD")
+                        "[DLSTREAMS] Direct manifest valid: %s" % url,
+                        "INFO",
+                        "DLHD")
                     return text
                 if text.lstrip().startswith("#EXTM3U"):
                     enhanced_log(
-                        f"[DLSTREAMS] Manifest scartato: playlist non video o asset web ({url})",
+                        "[DLSTREAMS] Manifest discarded: non-video playlist or web asset (%s)" % url,
                         "WARNING",
                         "DLHD")
             enhanced_log(
-                f"[DLSTREAMS] Manifest diretto non valido HTTP {
-                    resp.status_code}: {url}", "DEBUG", "DLHD")
+                "[DLSTREAMS] Direct manifest invalid HTTP %s: %s" % (resp.status_code, url),
+                "DEBUG",
+                "DLHD")
         except Exception as exc:
             enhanced_log(
-                f"[DLSTREAMS] Fetch manifest diretto fallito: {exc}",
+                "[DLSTREAMS] Direct manifest fetch failed: %s" % exc,
                 "DEBUG",
                 "DLHD")
         return None
 
     def _is_valid_media_manifest(self, text, manifest_url=None):
-        """Accetta playlist HLS DLHD, scartando playlist-esca composte da asset web."""
+        """Accept DLHD HLS playlists, discarding decoy playlists made of web assets."""
         if not text:
             return False
 
@@ -779,7 +809,7 @@ class DLHDExtractor:
         if accepted:
             if rejected_assets:
                 enhanced_log(
-                    f"[DLSTREAMS] Manifest con {accepted} segmenti validi e {rejected_assets} asset scartati",
+                    "[DLSTREAMS] Manifest with %d valid segments and %d discarded assets" % (accepted, rejected_assets),
                     "DEBUG",
                     "DLHD")
             return True
@@ -848,8 +878,7 @@ class DLHDExtractor:
                 return True
             return False
 
-        # Segmenti senza estensione: validi solo se arrivano dallo stesso
-        # gateway o da path HLS/proxy.
+        # Segments without extension: valid only if from the same gateway or HLS/proxy path
         if same_manifest_host:
             return True
         return any(
@@ -877,7 +906,7 @@ class DLHDExtractor:
 
     def _extract_dlstreams_candidates_from_html(
             self, html, base_url, channel_key):
-        """Estrae URL stream dal markup del player, equivalente leggero del capture browser."""
+        """Extract stream URLs from player markup, light equivalent of browser capture."""
         if not html:
             return []
 
@@ -949,12 +978,13 @@ class DLHDExtractor:
                 cleaned.append(candidate)
         if cleaned:
             enhanced_log(
-                f"[DLSTREAMS] Iframe candidates trovati: {
-                    len(cleaned)}", "INFO", "DLHD")
+                "[DLSTREAMS] Iframe candidates found: %d" % len(cleaned),
+                "INFO",
+                "DLHD")
         return cleaned
 
     def _extract_modern_m3u8_servers(self, html):
-        """Estrae i gateway M3U8 dal player moderno DLHD/chevy."""
+        """Extract M3U8 gateways from modern DLHD/chevy player."""
         if not html:
             return []
 
@@ -995,7 +1025,7 @@ class DLHDExtractor:
         return cleaned
 
     def _candidate_lookup_bases(self, html, preferred_base, iframe_origin):
-        """Ordina i possibili gateway /server_lookup e /proxy scoperti dal player."""
+        """Order possible /server_lookup and /proxy gateways discovered from the player."""
         bases = []
 
         def add_base(value):
@@ -1045,7 +1075,7 @@ class DLHDExtractor:
             server_key,
             channel_key,
             extra_data=None):
-        """Costruisce candidati stream moderni e legacy a partire da server_key."""
+        """Build modern and legacy stream candidates from server_key."""
         candidates = []
 
         def add(url):
@@ -1061,25 +1091,25 @@ class DLHDExtractor:
             "").replace(
             "http://",
             "").strip("/")
-        server_base = "https://{}".format(server) if server else ""
+        server_base = "https://%s" % server if server else ""
         server_root = server
         if server_root.startswith("chevy."):
             server_root = server_root[len("chevy."):]
 
         if server_key == "top1/cdn":
             if server_base:
-                add("{}/proxy/top1/cdn/{}/mono.css".format(server_base, channel_key))
+                add("%s/proxy/top1/cdn/%s/mono.css" % (server_base, channel_key))
             for domain in [
                 server_root,
                 self.base_domain,
                 "newkso.ru",
                     "kiko2.ru"]:
                 if domain:
-                    add("https://top1.{}/top1/cdn/{}/mono.css".format(domain, channel_key))
-                    add("https://top1new.{}/top1/cdn/{}/mono.css".format(domain, channel_key))
+                    add("https://top1.%s/top1/cdn/%s/mono.css" % (domain, channel_key))
+                    add("https://top1new.%s/top1/cdn/%s/mono.css" % (domain, channel_key))
         else:
             if server_base:
-                add("{}/proxy/{}/{}/mono.css".format(server_base,
+                add("%s/proxy/%s/%s/mono.css" % (server_base,
                     server_key, channel_key))
             for domain in [
                 server_root,
@@ -1087,14 +1117,15 @@ class DLHDExtractor:
                 "newkso.ru",
                     "kiko2.ru"]:
                 if domain:
-                    add("https://{}new.{}/{}/{}/mono.css".format(server_key,
+                    add("https://%snew.%s/%s/%s/mono.css" % (server_key,
                         domain, server_key, channel_key))
-                    add("https://{}.{}/{}/{}/mono.css".format(server_key,
+                    add("https://%s.%s/%s/%s/mono.css" % (server_key,
                         domain, server_key, channel_key))
 
         enhanced_log(
-            f"[MODERN_FLOW] Stream candidati costruiti: {
-                len(candidates)}", "DEBUG", "DLHD")
+            "[MODERN_FLOW] Stream candidates built: %d" % len(candidates),
+            "DEBUG",
+            "DLHD")
         return candidates
 
     def _extract_modern_channel_key(self, html, channel_id):
@@ -1105,7 +1136,7 @@ class DLHDExtractor:
                 re.IGNORECASE)
             if match and match.group(1):
                 return match.group(1).strip()
-        return f"premium{channel_id}"
+        return "premium%s" % channel_id
 
     def _build_dlhd_client_token(
             self,
@@ -1116,8 +1147,8 @@ class DLHDExtractor:
         screen_res = "1920x1080"
         timezone = "Europe/Rome"
         lang = "it-IT"
-        fingerprint = f"{user_agent}|{screen_res}|{timezone}|{lang}"
-        sign_data = f"{channel_key}|{auth_country}|{auth_ts}|{user_agent}|{fingerprint}"
+        fingerprint = "%s|%s|%s|%s" % (user_agent, screen_res, timezone, lang)
+        sign_data = "%s|%s|%s|%s|%s" % (channel_key, auth_country, auth_ts, user_agent, fingerprint)
         return base64.b64encode(sign_data.encode('utf-8')).decode('utf-8')
 
     def _extract_recaptcha_site_key(self, html):
@@ -1140,18 +1171,18 @@ class DLHDExtractor:
             iframe_origin,
             channel_key,
             user_agent):
-        """Ottiene un token reCAPTCHA v3 headless usando la stessa action del player."""
-        action = f"verify_{channel_key}"
+        """Obtain a headless reCAPTCHA v3 token using the same action as the player."""
+        action = "verify_%s" % channel_key
         google_headers = {
             'User-Agent': user_agent,
             'Accept-Language': 'en-US,en;q=0.9',
         }
 
-        api_url = f"https://www.google.com/recaptcha/api.js?render={site_key}"
+        api_url = "https://www.google.com/recaptcha/api.js?render=%s" % site_key
         api_resp = self._http_get(api_url, headers=google_headers, timeout=10)
         version_match = re.search(r'/releases/([^/]+)/', api_resp.text or '')
         if not version_match:
-            raise DLHDExtractorError("Versione reCAPTCHA non trovata")
+            raise DLHDExtractorError("reCAPTCHA version not found")
         recaptcha_version = version_match.group(1)
 
         encoded_origin = base64.b64encode(
@@ -1170,14 +1201,14 @@ class DLHDExtractor:
         anchor_resp = self._http_get(
             "https://www.google.com/recaptcha/api2/anchor",
             params=anchor_params,
-            headers=dict(google_headers, Referer=f"{iframe_origin}/"),
+            headers=dict(google_headers, Referer="%s/" % iframe_origin),
             timeout=10
         )
         anchor_match = re.search(
             r'id=["\']recaptcha-token["\'][^>]*value=["\']([^"\']+)["\']',
             anchor_resp.text or '')
         if not anchor_match:
-            raise DLHDExtractorError("Anchor token reCAPTCHA non trovato")
+            raise DLHDExtractorError("reCAPTCHA anchor token not found")
 
         reload_data = {
             'v': recaptcha_version,
@@ -1190,7 +1221,7 @@ class DLHDExtractor:
             'sa': action,
         }
         reload_resp = self._http_post(
-            f"https://www.google.com/recaptcha/api2/reload?k={site_key}",
+            "https://www.google.com/recaptcha/api2/reload?k=%s" % site_key,
             data=reload_data,
             headers=dict(
                 google_headers,
@@ -1203,7 +1234,7 @@ class DLHDExtractor:
             r'["\']rresp["\']\s*,\s*["\']([^"\']+)["\']',
             reload_resp.text or '')
         if not token_match:
-            raise DLHDExtractorError("Token rresp reCAPTCHA non trovato")
+            raise DLHDExtractorError("reCAPTCHA rresp token not found")
         return token_match.group(1)
 
     def _verify_modern_gateway(
@@ -1216,12 +1247,12 @@ class DLHDExtractor:
         site_key = self._extract_recaptcha_site_key(iframe_content)
         if not site_key:
             enhanced_log(
-                "[MODERN_VERIFY] Site key reCAPTCHA non trovata",
+                "[MODERN_VERIFY] Site key reCAPTCHA not found",
                 "DEBUG",
                 "DLHD")
             return False
 
-        iframe_origin = f"https://{urlparse(iframe_url).netloc}"
+        iframe_origin = "https://%s" % urlparse(iframe_url).netloc
         try:
             recaptcha_token = self._build_recaptcha_v3_token(
                 site_key, iframe_origin, channel_key, user_agent)
@@ -1236,7 +1267,7 @@ class DLHDExtractor:
                 'recaptcha-token': recaptcha_token,
                 'channel_id': channel_key,
             }
-            verify_url = f"https://{server}/verify"
+            verify_url = "https://%s/verify" % server
             verify_resp = self._http_post(
                 verify_url,
                 json=verify_payload,
@@ -1249,7 +1280,7 @@ class DLHDExtractor:
 
             if verify_resp.status_code == 200 and verify_data.get('success'):
                 enhanced_log(
-                    f"[MODERN_VERIFY] Verifica reCAPTCHA riuscita su {server}",
+                    "[MODERN_VERIFY] reCAPTCHA verification successful on %s" % server,
                     "INFO",
                     "DLHD")
                 data_keys = list(
@@ -1258,19 +1289,19 @@ class DLHDExtractor:
                     verify_data,
                     dict) else []
                 enhanced_log(
-                    f"[MODERN_VERIFY] Payload keys: {data_keys}",
+                    "[MODERN_VERIFY] Payload keys: %s" % data_keys,
                     "DEBUG",
                     "DLHD")
                 return verify_data
 
             enhanced_log(
-                f"[MODERN_VERIFY] Verifica fallita su {server}: HTTP {
-                    verify_resp.status_code} {
-                    str(verify_data)[
-                        :160]}", "WARNING", "DLHD")
+                "[MODERN_VERIFY] Verification failed on %s: HTTP %s %s" % (
+                    server, verify_resp.status_code, str(verify_data)[:160]),
+                "WARNING",
+                "DLHD")
         except Exception as exc:
             enhanced_log(
-                f"[MODERN_VERIFY] Errore verifica su {server}: {exc}",
+                "[MODERN_VERIFY] Verification error on %s: %s" % (server, exc),
                 "WARNING",
                 "DLHD")
         return {}
@@ -1281,14 +1312,14 @@ class DLHDExtractor:
             iframe_content,
             channel_id,
             headers):
-        """Risoluzione diretta del player moderno: server_lookup + /proxy/.../mono.css."""
+        """Direct resolution of modern player: server_lookup + /proxy/.../mono.css."""
         channel_key = self._extract_modern_channel_key(
             iframe_content, channel_id)
         servers = self._extract_modern_m3u8_servers(iframe_content)
         if not servers:
-            raise DLHDExtractorError("Gateway M3U8 moderni non trovati")
+            raise DLHDExtractorError("Modern M3U8 gateways not found")
 
-        iframe_origin = f"https://{urlparse(iframe_url).netloc}"
+        iframe_origin = "https://%s" % urlparse(iframe_url).netloc
         user_agent = headers.get('User-Agent', random.choice(self.user_agents))
         auth_params = self._extract_auth_params(iframe_content)
         auth_token = auth_params.get('auth_token')
@@ -1308,7 +1339,7 @@ class DLHDExtractor:
             else:
                 verified_gateway = True
 
-            lookup_url = f"https://{server}/server_lookup?channel_id={channel_key}"
+            lookup_url = "https://%s/server_lookup?channel_id=%s" % (server, channel_key)
             lookup_headers = {
                 'User-Agent': user_agent,
                 'Accept': 'application/json, text/plain, */*',
@@ -1319,25 +1350,23 @@ class DLHDExtractor:
                 lookup_headers['X-Recaptcha-Verified'] = '1'
             try:
                 enhanced_log(
-                    f"[MODERN_FLOW] Server lookup: {lookup_url}",
+                    "[MODERN_FLOW] Server lookup: %s" % lookup_url,
                     "DEBUG",
                     "DLHD")
                 lookup_resp = self._http_get(
                     lookup_url, headers=lookup_headers, timeout=5)
                 if lookup_resp.status_code != 200:
                     enhanced_log(
-                        f"[MODERN_FLOW] Lookup HTTP {
-                            lookup_resp.status_code} su {server}",
+                        "[MODERN_FLOW] Lookup HTTP %s on %s" % (
+                            lookup_resp.status_code, server),
                         "DEBUG",
                         "DLHD")
                     continue
 
                 server_data = lookup_resp.json()
                 enhanced_log(
-                    f"[MODERN_FLOW] Lookup data keys: {
-                        list(
-                            server_data.keys())[
-                            :8]}",
+                    "[MODERN_FLOW] Lookup data keys: %s" % list(
+                        server_data.keys())[:8],
                     "DEBUG",
                     "DLHD")
                 server_key = server_data.get('server_key') or 'wind'
@@ -1355,7 +1384,7 @@ class DLHDExtractor:
                 if verified_gateway:
                     stream_headers['X-Recaptcha-Verified'] = '1'
                 if auth_token:
-                    stream_headers['Authorization'] = f'Bearer {auth_token}'
+                    stream_headers['Authorization'] = 'Bearer %s' % auth_token
                     stream_headers['X-Channel-Key'] = channel_key
                     stream_headers['Heartbeat-Url'] = self.heartbeat_url
                 if client_token:
@@ -1371,7 +1400,9 @@ class DLHDExtractor:
                             manifest_candidate, stream_headers)
                         if manifest_text:
                             enhanced_log(
-                                f"[MODERN_FLOW] Manifest risolto via {manifest_candidate}", "INFO", "DLHD")
+                                "[MODERN_FLOW] Manifest resolved via %s" % manifest_candidate,
+                                "INFO",
+                                "DLHD")
                             return {
                                 "destination_url": manifest_candidate,
                                 "request_headers": stream_headers,
@@ -1382,16 +1413,16 @@ class DLHDExtractor:
                             }
             except Exception as exc:
                 enhanced_log(
-                    f"[MODERN_FLOW] Errore su {server}: {exc}",
+                    "[MODERN_FLOW] Error on %s: %s" % (server, exc),
                     "DEBUG",
                     "DLHD")
 
         raise DLHDExtractorError(
-            "Manifest moderno non recuperabile dai gateway M3U8")
+            "Modern manifest not recoverable from M3U8 gateways")
 
     def _extract_dlstreams_process(self, url, channel_id):
-        """Nuovo processo DLStreams allineato al source async, senza Playwright su Enigma2."""
-        channel_key = f"premium{channel_id}"
+        """New DLStreams process aligned with async source, without Playwright on Enigma2."""
+        channel_key = "premium%s" % channel_id
         iframe_origin = self.entry_origin.rstrip("/")
         lookup_base = (self.stream_origin or self.entry_origin).rstrip("/")
 
@@ -1399,7 +1430,7 @@ class DLHDExtractor:
         if cached_item and time.time() - cached_item[1] < 3:
             m3u8_url, manifest_text = cached_item[0], cached_item[2]
             enhanced_log(
-                f"[DLSTREAMS] Manifest da micro-cache per {channel_key}",
+                "[DLSTREAMS] Manifest from micro-cache for %s" % channel_key,
                 "DEBUG",
                 "DLHD")
             return self._build_dlstreams_result(
@@ -1440,15 +1471,16 @@ class DLHDExtractor:
                         return result
                 except Exception as iframe_error:
                     enhanced_log(
-                        f"[DLSTREAMS] Iframe estratti non risolti: {iframe_error}",
+                        "[DLSTREAMS] Iframe candidates not resolved: %s" % iframe_error,
                         "DEBUG",
                         "DLHD")
 
             lookup_bases = self._candidate_lookup_bases(
                 player_html, lookup_base, iframe_origin)
             enhanced_log(
-                f"[DLSTREAMS] Gateway candidati: {
-                    len(lookup_bases)}", "DEBUG", "DLHD")
+                "[DLSTREAMS] Gateway candidates: %d" % len(lookup_bases),
+                "DEBUG",
+                "DLHD")
             for lookup_base in lookup_bases:
                 server_key = self._lookup_server_key_dlstreams(
                     lookup_base, channel_key, iframe_origin)
@@ -1460,7 +1492,7 @@ class DLHDExtractor:
                 candidate_urls = []
                 for candidate_key in server_keys:
                     candidate_urls.append(
-                        f"{lookup_base}/proxy/{candidate_key}/{channel_key}/mono.css")
+                        "%s/proxy/%s/%s/mono.css" % (lookup_base, candidate_key, channel_key))
                     lookup_host = urlparse(lookup_base).netloc
                     candidate_urls.extend(
                         self._build_stream_url_candidates(
@@ -1488,11 +1520,11 @@ class DLHDExtractor:
 
         self._clear_channel_cache(channel_id)
         raise DLHDExtractorError(
-            "DLStreams manifest diretto non recuperabile senza browser")
+            "DLStreams direct manifest not recoverable without browser")
 
     def _build_dlstreams_headers(self, m3u8_url, iframe_origin):
         headers = {
-            "Referer": f"{iframe_origin}/",
+            "Referer": "%s/" % iframe_origin,
             "Origin": iframe_origin,
             "User-Agent": self.base_headers.get("User-Agent", random.choice(self.user_agents)),
             "Accept": "*/*",
@@ -1526,7 +1558,7 @@ class DLHDExtractor:
         return result
 
     def _prepare_iframe_sources(self, iframe_content):
-        """Prepara contenuti normalizzati/unpacked per il parsing del player offuscato."""
+        """Prepare normalised/unpacked content for parsing obfuscated player."""
         raw_content = iframe_content or ""
         normalized = self._normalize_js_source(raw_content)
 
@@ -1544,8 +1576,9 @@ class DLHDExtractor:
 
         if inline_scripts:
             enhanced_log(
-                f"[AUTH_PARSE] Script inline trovati: {
-                    len(inline_scripts)}", "DEBUG", "DLHD")
+                "[AUTH_PARSE] Inline scripts found: %d" % len(inline_scripts),
+                "DEBUG",
+                "DLHD")
 
         for source in list(sources):
             try:
@@ -1554,15 +1587,17 @@ class DLHDExtractor:
                     if unpacked and unpacked not in sources:
                         sources.append(unpacked)
                         enhanced_log(
-                            "[AUTH_PARSE] JS inline/player unpacked con successo", "INFO", "DLHD")
+                            "[AUTH_PARSE] JS inline/player unpacked successfully",
+                            "INFO",
+                            "DLHD")
             except UnpackingError as exc:
                 enhanced_log(
-                    f"[AUTH_PARSE] Unpack non riuscito: {exc}",
+                    "[AUTH_PARSE] Unpack failed: %s" % exc,
                     "DEBUG",
                     "DLHD")
             except Exception as exc:
                 enhanced_log(
-                    f"[AUTH_PARSE] Errore unpack: {exc}",
+                    "[AUTH_PARSE] Unpack error: %s" % exc,
                     "DEBUG",
                     "DLHD")
 
@@ -1587,7 +1622,7 @@ class DLHDExtractor:
     def _derive_channel_key_from_url(self, iframe_url):
         match_id = re.search(r'id=([0-9]+)', iframe_url)
         if match_id:
-            return f"premium{match_id.group(1)}"
+            return "premium%s" % match_id.group(1)
         return None
 
     def _looks_like_channel_key(self, value):
@@ -1633,7 +1668,7 @@ class DLHDExtractor:
         return sorted(set(timestamps))
 
     def _append_linked_scripts(self, iframe_url, iframe_content, headers):
-        """Scarica script collegati al player iframe: spesso l'auth non e' inline."""
+        """Download linked scripts from the iframe player: auth is often not inline."""
         if not iframe_content:
             return iframe_content
 
@@ -1668,19 +1703,21 @@ class DLHDExtractor:
             if discovered_urls:
                 sample = ", ".join(discovered_urls[:5])
                 enhanced_log(
-                    f"[AUTH_PARSE] Script src trovati ma filtrati: {
-                        len(discovered_urls)} ({sample})", "DEBUG", "DLHD")
+                    "[AUTH_PARSE] Script src found but filtered: %d (%s)" % (
+                        len(discovered_urls), sample),
+                    "DEBUG",
+                    "DLHD")
             else:
                 enhanced_log(
-                    "[AUTH_PARSE] Nessuno script player collegato da scaricare",
+                    "[AUTH_PARSE] No linked player scripts to download",
                     "DEBUG",
                     "DLHD")
             return iframe_content
 
         sample = ", ".join(script_urls[:5])
         enhanced_log(
-            f"[AUTH_PARSE] Script collegati candidati: {
-                len(script_urls)} ({sample})",
+            "[AUTH_PARSE] Linked script candidates: %d (%s)" % (
+                len(script_urls), sample),
             "DEBUG",
             "DLHD")
 
@@ -1688,7 +1725,7 @@ class DLHDExtractor:
         script_headers.update({
             'Accept': '*/*',
             'Referer': iframe_url,
-            'Origin': f"https://{iframe_host}",
+            'Origin': "https://%s" % iframe_host,
         })
 
         appended_sources = []
@@ -1698,32 +1735,33 @@ class DLHDExtractor:
                     script_url, headers=script_headers, timeout=4)
                 if resp.status_code == 200 and resp.text:
                     appended_sources.append(
-                        "\n/* linked script: {} */\n{}".format(script_url, resp.text))
+                        "\n/* linked script: %s */\n%s" % (script_url, resp.text))
                     enhanced_log(
-                        f"[AUTH_PARSE] Script collegato caricato: {script_url}",
+                        "[AUTH_PARSE] Linked script loaded: %s" % script_url,
                         "DEBUG",
                         "DLHD")
                 else:
                     enhanced_log(
-                        f"[AUTH_PARSE] Script collegato HTTP {
-                            resp.status_code}: {script_url}", "DEBUG", "DLHD")
+                        "[AUTH_PARSE] Linked script HTTP %s: %s" % (
+                            resp.status_code, script_url),
+                        "DEBUG",
+                        "DLHD")
             except Exception as exc:
                 enhanced_log(
-                    f"[AUTH_PARSE] Script collegato fallito {script_url}: {exc}",
+                    "[AUTH_PARSE] Linked script failed %s: %s" % (script_url, exc),
                     "DEBUG",
                     "DLHD")
 
         if appended_sources:
             enhanced_log(
-                f"[AUTH_PARSE] Aggiunti {
-                    len(appended_sources)} script collegati al parsing auth",
+                "[AUTH_PARSE] Added %d linked scripts to auth parsing" % len(appended_sources),
                 "INFO",
                 "DLHD")
             return iframe_content + "\n" + "\n".join(appended_sources)
         return iframe_content
 
     def _extract_auth_params(self, js_content):
-        """Estrae parametri di autenticazione (come EasyProxy)"""
+        """Extract authentication parameters (like EasyProxy)."""
         sources = self._prepare_iframe_sources(js_content)
         params = {}
         patterns = {
@@ -1773,7 +1811,7 @@ class DLHDExtractor:
         if not params.get('auth_token'):
             params['auth_token'] = self._extract_jwt_token(sources)
 
-        # Fallback per parametri mancanti
+        # Fallback for missing parameters
         if not params['auth_country']:
             params['auth_country'] = 'IT'  # Default country
 
@@ -1798,10 +1836,10 @@ class DLHDExtractor:
         return params
 
     def _extract_lovecdn_stream(self, iframe_url, iframe_content, headers):
-        """Estrattore alternativo per iframe lovecdn.ru (come EasyProxy)"""
-        enhanced_log("[LOVECDN] Estrazione alternativa", "INFO", "DLHD")
+        """Alternative extractor for lovecdn.ru iframes (like EasyProxy)."""
+        enhanced_log("[LOVECDN] Alternative extraction", "INFO", "DLHD")
         try:
-            # Pattern per URL stream
+            # Stream URL patterns
             m3u8_patterns = [
                 r'["\']([^"\']*.m3u8[^"\']*)["\']',
                 r'source[:\s]+["\']([^"\'\']+)["\']',
@@ -1820,7 +1858,7 @@ class DLHDExtractor:
                     break
 
             if not stream_url:
-                # Costruzione dinamica
+                # Dynamic construction
                 channel_match = re.search(
                     r'(?:stream|channel)["\s:=]+["\']([^"\']+ )["\']', iframe_content)
                 server_match = re.search(
@@ -1829,22 +1867,21 @@ class DLHDExtractor:
 
                 if channel_match:
                     channel_name = channel_match.group(1)
-                    # Usa base_domain dinamico
                     server = server_match.group(
                         1) if server_match else self.base_domain
-                    stream_url = f"https://{server}/{channel_name}/mono.m3u8"
+                    stream_url = "https://%s/%s/mono.m3u8" % (server, channel_name)
 
             if not stream_url:
-                raise DLHDExtractorError("Stream URL non trovato in lovecdn")
+                raise DLHDExtractorError("Stream URL not found in lovecdn")
 
-            iframe_origin = f"https://{urlparse(iframe_url).netloc}"
+            iframe_origin = "https://%s" % urlparse(iframe_url).netloc
             stream_headers = {
                 'User-Agent': headers['User-Agent'],
                 'Referer': iframe_url,
                 'Origin': iframe_origin
             }
 
-            enhanced_log("[LOVECDN] Estrazione completata", "INFO", "DLHD")
+            enhanced_log("[LOVECDN] Extraction completed", "INFO", "DLHD")
             return {
                 "destination_url": stream_url,
                 "request_headers": stream_headers,
@@ -1853,22 +1890,22 @@ class DLHDExtractor:
             }
 
         except Exception as e:
-            enhanced_log(f"[LOVECDN] Errore: {e}", "ERROR", "DLHD")
-            raise DLHDExtractorError(f"Lovecdn extraction failed: {e}")
+            enhanced_log("[LOVECDN] Error: %s" % e, "ERROR", "DLHD")
+            raise DLHDExtractorError("Lovecdn extraction failed: %s" % e)
 
     def _extract_new_auth_flow(self, iframe_url, iframe_content, headers):
-        """Gestisce il nuovo flusso di autenticazione con estrazione euristica migliorata."""
+        """Handles the new authentication flow with improved heuristic extraction."""
 
         enhanced_log(
-            "[NEW_AUTH_FLOW] Tentativo rilevamento nuovo flusso auth obfuscated",
+            "[NEW_AUTH_FLOW] Attempting new obfuscated auth flow detection",
             "INFO",
             "DLHD")
         sources = self._prepare_iframe_sources(iframe_content)
 
-        # 1. Estrazione euristica delle variabili migliorata
+        # 1. Improved heuristic variable extraction
         params = {}
 
-        # Cerca il JWT (inizia con eyJ...)
+        # Look for JWT (starts with eyJ...)
         jwt_patterns = [
             r'["\']([eyJ][a-zA-Z0-9\-_]+\.[a-zA-Z0-9\-_]+\.[a-zA-Z0-9\-_]+)["\']',
             r'token["\s:=]+["\']([eyJ][a-zA-Z0-9\-_]+\.[a-zA-Z0-9\-_]+\.[a-zA-Z0-9\-_]+)["\']',
@@ -1880,12 +1917,14 @@ class DLHDExtractor:
                 if jwt_match:
                     params['auth_token'] = jwt_match.group(1)
                     enhanced_log(
-                        "[NEW_AUTH_FLOW] Trovato JWT Token", "INFO", "DLHD")
+                        "[NEW_AUTH_FLOW] JWT Token found",
+                        "INFO",
+                        "DLHD")
                     break
             if params.get('auth_token'):
                 break
 
-        # Cerca Channel Key con pattern migliorati
+        # Look for Channel Key with improved patterns
         channel_patterns = [
             r'["\']([a-z]+[0-9]+)["\']',
             r'channelKey["\s:=]+["\']([^"\';\s]+)["\']',
@@ -1898,7 +1937,6 @@ class DLHDExtractor:
                 key_matches = re.finditer(pattern, source, re.IGNORECASE)
                 for m in key_matches:
                     val = m.group(1)
-                    # Filtro piu rigoroso per channel key
                     if (
                         re.match(
                             r'^(premium|dad|sport|live|channel)[0-9]+$',
@@ -1908,7 +1946,9 @@ class DLHDExtractor:
                                 char.isdigit() for char in val) and not len(val) > 15)):
                         params['channel_key'] = val
                         enhanced_log(
-                            f"[NEW_AUTH_FLOW] Trovata Channel Key: {val}", "INFO", "DLHD")
+                            "[NEW_AUTH_FLOW] Channel Key found: %s" % val,
+                            "INFO",
+                            "DLHD")
                         break
                 if params.get('channel_key'):
                     break
@@ -1921,12 +1961,13 @@ class DLHDExtractor:
         if derived_channel_key:
             params['channel_key'] = derived_channel_key
             enhanced_log(
-                f"[NEW_AUTH_FLOW] Channel Key derivata dall'URL: {
-                    params['channel_key']}", "INFO", "DLHD")
+                "[NEW_AUTH_FLOW] Channel Key derived from URL: %s" % params['channel_key'],
+                "INFO",
+                "DLHD")
         elif params.get('channel_key') and not self._looks_like_channel_key(params['channel_key']):
             params['channel_key'] = None
 
-        # Cerca Country con pattern migliorati
+        # Look for Country with improved patterns
         country_patterns = [
             r'["\']([A-Z]{2})["\']',
             r'country["\s:=]+["\']([A-Z]{2})["\']',
@@ -1943,9 +1984,9 @@ class DLHDExtractor:
                 break
 
         if not params.get('auth_country'):
-            params['auth_country'] = 'IT'  # Fallback per Italia
+            params['auth_country'] = 'IT'  # Fallback for Italy
 
-        # Cerca Timestamp con pattern migliorati
+        # Look for Timestamp with improved patterns
         ts_patterns = [
             r'["\']([0-9]{10})["\']',
             r'timestamp["\s:=]+["\']([0-9]{10})["\']',
@@ -1961,21 +2002,19 @@ class DLHDExtractor:
                 timestamps.extend([int(x) for x in matches])
 
         if timestamps:
-            # Ordina i timestamp e usa il più piccolo come iat, il più grande
-            # come exp
             timestamps = sorted(set(timestamps))
             current_time = int(time.time())
 
-            # Trova il timestamp più vicino al tempo corrente per iat
+            # Find the timestamp closest to current time for iat
             iat_candidates = [
                 ts for ts in timestamps if abs(
-                    ts - current_time) < 3600]  # Entro 1 ora
+                    ts - current_time) < 3600]  # Within 1 hour
             if iat_candidates:
                 params['auth_ts'] = str(min(iat_candidates))
             else:
                 params['auth_ts'] = str(timestamps[0])
 
-            # Trova exp (dovrebbe essere maggiore di iat)
+            # Find exp (should be greater than iat)
             exp_candidates = [
                 ts for ts in timestamps if ts > int(
                     params['auth_ts'])]
@@ -1984,54 +2023,54 @@ class DLHDExtractor:
             else:
                 params['auth_expiry'] = str(int(params['auth_ts']) + 3600)
         else:
-            # Fallback con timestamp corrente
+            # Fallback with current timestamp
             current_time = int(time.time())
             params['auth_ts'] = str(current_time)
             params['auth_expiry'] = str(current_time + 3600)
 
-        # Validazione parametri
+        # Parameter validation
         if not params.get('auth_token'):
             sample = sources[-1][:250].replace('\n', ' ') if sources else ''
             enhanced_log(
-                f"[NEW_AUTH_FLOW] JWT non trovato. Sample sorgente: {sample}",
+                "[NEW_AUTH_FLOW] JWT not found. Source sample: %s" % sample,
                 "WARNING",
                 "DLHD")
             raise DLHDExtractorError(
-                "Impossibile estrarre JWT dal nuovo flusso")
+                "Unable to extract JWT from new flow")
 
-        # ✅ CORREZIONE CRITICA: Usa sempre channel key derivata dall'URL per sicurezza
+        # CRITICAL FIX: Always use channel key derived from URL for safety
         m_url = re.search(r'id=([0-9]+)', iframe_url)
         if m_url:
             channel_id = m_url.group(1)
-            params['channel_key'] = f"premium{channel_id}"
+            params['channel_key'] = "premium%s" % channel_id
             enhanced_log(
-                f"[NEW_AUTH_FLOW] ✅ Channel Key forzata dall'URL: {
-                    params['channel_key']}", "INFO", "DLHD")
+                "[NEW_AUTH_FLOW] Channel Key forced from URL: %s" % params['channel_key'],
+                "INFO",
+                "DLHD")
         elif not params.get('channel_key'):
-            raise DLHDExtractorError("Channel Key mancante e non derivabile")
+            raise DLHDExtractorError("Channel Key missing and not derivable")
 
         enhanced_log(
-            f"[NEW_AUTH_FLOW] ✅ Parametri estratti: {
-                list(
-                    params.keys())}",
+            "[NEW_AUTH_FLOW] Extracted parameters: %s" % list(
+                params.keys()),
             "INFO",
             "DLHD")
 
-        # 2. Server Lookup (salta auth2.php)
+        # 2. Server Lookup (skip auth2.php)
         enhanced_log(
-            "[NEW_AUTH_FLOW] 🚀 Skipping auth2.php, procedo diretto al server lookup",
+            "[NEW_AUTH_FLOW] Skipping auth2.php, proceeding directly to server lookup",
             "INFO",
             "DLHD")
 
         user_agent = headers.get('User-Agent', random.choice(self.user_agents))
-        iframe_origin = f"https://{urlparse(iframe_url).netloc}"
+        iframe_origin = "https://%s" % urlparse(iframe_url).netloc
 
         channel_key = params['channel_key']
         auth_token = params['auth_token']
 
         # Server Lookup
-        server_lookup_url = f"{
-            self.server_lookup_url}?channel_id={channel_key}"
+        server_lookup_url = "%s?channel_id=%s" % (
+            self.server_lookup_url, channel_key)
         lookup_headers = {
             'User-Agent': user_agent,
             'Accept': '*/*',
@@ -2040,7 +2079,7 @@ class DLHDExtractor:
         }
 
         enhanced_log(
-            f"[NEW_AUTH_FLOW] 🔍 Server Lookup: {server_lookup_url}",
+            "[NEW_AUTH_FLOW] Server Lookup: %s" % server_lookup_url,
             "DEBUG",
             "DLHD")
 
@@ -2053,33 +2092,33 @@ class DLHDExtractor:
 
             if not server_key:
                 raise DLHDExtractorError(
-                    f"No server_key in response: {server_data}")
+                    "No server_key in response: %s" % server_data)
 
             enhanced_log(
-                f"[NEW_AUTH_FLOW] ✅ Server key: {server_key}",
+                "[NEW_AUTH_FLOW] Server key: %s" % server_key,
                 "INFO",
                 "DLHD")
         except Exception as e:
             enhanced_log(
-                f"[NEW_AUTH_FLOW] ❌ Server lookup fallito: {e}",
+                "[NEW_AUTH_FLOW] Server lookup failed: %s" % e,
                 "ERROR",
                 "DLHD")
-            raise DLHDExtractorError(f"Server lookup failed: {e}")
+            raise DLHDExtractorError("Server lookup failed: %s" % e)
 
-        # 3. Heartbeat per stabilire sessione
+        # 3. Heartbeat to establish session
         auth_country = params.get('auth_country', 'IT')
         auth_ts = params.get('auth_ts', str(int(time.time())))
         screen_res = "1920x1080"
         timezone = "Europe/Rome"
         lang = "it-IT"
-        fingerprint = f"{user_agent}|{screen_res}|{timezone}|{lang}"
-        sign_data = f"{channel_key}|{auth_country}|{auth_ts}|{user_agent}|{fingerprint}"
+        fingerprint = "%s|%s|%s|%s" % (user_agent, screen_res, timezone, lang)
+        sign_data = "%s|%s|%s|%s|%s" % (channel_key, auth_country, auth_ts, user_agent, fingerprint)
         client_token = base64.b64encode(
             sign_data.encode('utf-8')).decode('utf-8')
 
         heartbeat_headers = {
             'User-Agent': user_agent,
-            'Authorization': f'Bearer {auth_token}',
+            'Authorization': 'Bearer %s' % auth_token,
             'X-Channel-Key': channel_key,
             'X-Client-Token': client_token,
             'Referer': iframe_url,
@@ -2088,18 +2127,20 @@ class DLHDExtractor:
 
         try:
             enhanced_log(
-                f"[NEW_AUTH_FLOW] 💓 Invio heartbeat: {
-                    self.heartbeat_url}", "DEBUG", "DLHD")
+                "[NEW_AUTH_FLOW] Sending heartbeat: %s" % self.heartbeat_url,
+                "DEBUG",
+                "DLHD")
             hb_resp = self._http_get(
                 self.heartbeat_url,
                 headers=heartbeat_headers,
                 timeout=5)
             enhanced_log(
-                f"[NEW_AUTH_FLOW] 💓 Heartbeat response: {
-                    hb_resp.status_code}", "DEBUG", "DLHD")
+                "[NEW_AUTH_FLOW] Heartbeat response: %s" % hb_resp.status_code,
+                "DEBUG",
+                "DLHD")
         except Exception as hb_e:
             enhanced_log(
-                f"[NEW_AUTH_FLOW] ⚠️ Heartbeat fallito: {hb_e}",
+                "[NEW_AUTH_FLOW] Heartbeat failed: %s" % hb_e,
                 "WARNING",
                 "DLHD")
 
@@ -2107,15 +2148,13 @@ class DLHDExtractor:
         if server_key == 'top1/cdn':
             stream_url = self.stream_cdn_template.replace(
                 '{CHANNEL}', channel_key)
-            # ✅ CORREZIONE CRITICA: Forza sempre .m3u8 per evitare segmenti .html/.css
         else:
             stream_url = self.stream_other_template.replace(
                 '{SERVER_KEY}', server_key).replace(
                 '{CHANNEL}', channel_key)
-            # ✅ CORREZIONE CRITICA: Forza sempre .m3u8 per evitare segmenti .html/.css
 
         enhanced_log(
-            f"[NEW_AUTH_FLOW] ✅ Stream URL costruito: {stream_url}",
+            "[NEW_AUTH_FLOW] Stream URL built: %s" % stream_url,
             "INFO",
             "DLHD")
 
@@ -2123,7 +2162,7 @@ class DLHDExtractor:
             'User-Agent': user_agent,
             'Referer': iframe_url,
             'Origin': iframe_origin,
-            'Authorization': f'Bearer {auth_token}',
+            'Authorization': 'Bearer %s' % auth_token,
             'X-Channel-Key': channel_key,
             'Heartbeat-Url': self.heartbeat_url,
             'X-Client-Token': client_token,
@@ -2138,7 +2177,7 @@ class DLHDExtractor:
         }
 
     def _get_stream_data_direct(self, channel_id, hosts_to_try):
-        """Estrazione diretta dall'iframe (PROCESSO PRINCIPALE come EasyProxy)"""
+        """Direct extraction from iframe (MAIN PROCESS like EasyProxy)."""
 
         user_agent = random.choice(self.user_agents)
         last_error = None
@@ -2149,9 +2188,9 @@ class DLHDExtractor:
                     iframe_url = str(iframe_host)
                     iframe_host = urlparse(iframe_url).netloc
                 else:
-                    iframe_url = f'https://{iframe_host}/premiumtv/daddyhd.php?id={channel_id}'
+                    iframe_url = 'https://%s/premiumtv/daddyhd.php?id=%s' % (iframe_host, channel_id)
                 enhanced_log(
-                    f"[DIRECT_IFRAME] Tentativo estrazione da: {iframe_url}",
+                    "[DIRECT_IFRAME] Extraction attempt from: %s" % iframe_url,
                     "INFO",
                     "DLHD")
 
@@ -2172,17 +2211,17 @@ class DLHDExtractor:
 
                 if resp.status_code != 200:
                     enhanced_log(
-                        f"[DIRECT_IFRAME] HTTP {
-                            resp.status_code}",
+                        "[DIRECT_IFRAME] HTTP %s" % resp.status_code,
                         "WARNING",
                         "DLHD")
-                    last_error = DLHDExtractorError(f"HTTP {resp.status_code}")
+                    last_error = DLHDExtractorError("HTTP %s" % resp.status_code)
                     continue
 
                 js_content = resp.text
                 enhanced_log(
-                    f"[DIRECT_IFRAME] Iframe caricato: {
-                        len(js_content)} bytes", "DEBUG", "DLHD")
+                    "[DIRECT_IFRAME] Iframe loaded: %d bytes" % len(js_content),
+                    "DEBUG",
+                    "DLHD")
                 js_content = self._append_linked_scripts(
                     iframe_url, js_content, embed_headers)
 
@@ -2191,36 +2230,40 @@ class DLHDExtractor:
                         iframe_url, js_content, channel_id, embed_headers)
                     if result:
                         enhanced_log(
-                            "[DIRECT_IFRAME] Modern flow DLHD riuscito", "INFO", "DLHD")
+                            "[DIRECT_IFRAME] Modern DLHD flow successful",
+                            "INFO",
+                            "DLHD")
                         return result
                 except Exception as modern_error:
                     enhanced_log(
-                        f"[DIRECT_IFRAME] Modern flow non disponibile: {modern_error}",
+                        "[DIRECT_IFRAME] Modern flow not available: %s" % modern_error,
                         "DEBUG",
                         "DLHD")
 
-                # Check lovecdn alternativo PRIMA di altri controlli
+                # Check lovecdn alternative BEFORE other checks
                 if 'lovecdn.ru' in js_content:
                     enhanced_log(
-                        "[DIRECT_IFRAME] Rilevato lovecdn.ru", "INFO", "DLHD")
+                        "[DIRECT_IFRAME] Detected lovecdn.ru",
+                        "INFO",
+                        "DLHD")
                     result = self._extract_lovecdn_stream(
                         iframe_url, js_content, embed_headers)
                     if result:
                         return result
 
-                # Check per contenuto valido
+                # Check for valid content
                 if len(js_content) < 1000:
                     enhanced_log(
-                        "[DIRECT_IFRAME] Contenuto troppo piccolo",
+                        "[DIRECT_IFRAME] Content too small",
                         "WARNING",
                         "DLHD")
                     last_error = DLHDExtractorError(
-                        "Contenuto iframe troppo piccolo")
+                        "Iframe content too small")
                     continue
 
-                # Step 2: Extract auth params (COME EASYPROXY)
+                # Step 2: Extract auth params (LIKE EASYPROXY)
                 enhanced_log(
-                    "[DIRECT_IFRAME] Estrazione parametri auth",
+                    "[DIRECT_IFRAME] Extracting auth parameters",
                     "DEBUG",
                     "DLHD")
                 params = self._extract_auth_params(js_content)
@@ -2228,13 +2271,13 @@ class DLHDExtractor:
                 if not all(params.values()):
                     missing = [k for k, v in params.items() if not v]
                     enhanced_log(
-                        f"[DIRECT_IFRAME] Parametri mancanti: {missing}",
+                        "[DIRECT_IFRAME] Missing parameters: %s" % missing,
                         "WARNING",
                         "DLHD")
 
-                    # ✅ NUOVO: Prova IMMEDIATAMENTE il nuovo flusso di autenticazione se mancano parametri
+                    # NEW: Try the new auth flow IMMEDIATELY if parameters are missing
                     enhanced_log(
-                        "[DIRECT_IFRAME] Parametri mancanti, attivo nuovo flusso auth",
+                        "[DIRECT_IFRAME] Missing parameters, activating new auth flow",
                         "INFO",
                         "DLHD")
                     try:
@@ -2242,26 +2285,28 @@ class DLHDExtractor:
                             iframe_url, js_content, embed_headers)
                         if result:
                             enhanced_log(
-                                "[DIRECT_IFRAME] ✅ Nuovo flusso riuscito per parametri mancanti",
+                                "[DIRECT_IFRAME] New flow successful for missing parameters",
                                 "INFO",
                                 "DLHD")
                             return result
                     except Exception as e:
                         enhanced_log(
-                            f"[DIRECT_IFRAME] Nuovo flusso fallito: {e}", "WARNING", "DLHD")
+                            "[DIRECT_IFRAME] New flow failed: %s" % e,
+                            "WARNING",
+                            "DLHD")
 
                     last_error = DLHDExtractorError(
-                        f"Missing params: {missing} and New Flow failed")
+                        "Missing params: %s and New Flow failed" % missing)
                     continue
 
-                # Step 3: Auth POST (COME EASYPROXY)
-                enhanced_log("[AUTH] POST autenticazione", "DEBUG", "DLHD")
+                # Step 3: Auth POST (LIKE EASYPROXY)
+                enhanced_log("[AUTH] POST authentication", "DEBUG", "DLHD")
 
-                # ✅ PRIORITÀ MASSIMA: Attiva IMMEDIATAMENTE nuovo flusso se parametri standard mancanti
+                # HIGH PRIORITY: Activate new flow IMMEDIATELY if standard params missing
                 if not all(params.values()):
                     missing = [k for k, v in params.items() if not v]
                     enhanced_log(
-                        f"[AUTH] ⚡ Parametri mancanti {missing} - ATTIVO NUOVO FLUSSO IMMEDIATO",
+                        "[AUTH] Missing params %s - ACTIVATING NEW FLOW IMMEDIATELY" % missing,
                         "WARNING",
                         "DLHD")
                     try:
@@ -2269,17 +2314,21 @@ class DLHDExtractor:
                             iframe_url, js_content, embed_headers)
                         if result:
                             enhanced_log(
-                                "[AUTH] ✅ NUOVO FLUSSO RIUSCITO per parametri mancanti", "INFO", "DLHD")
+                                "[AUTH] NEW FLOW SUCCESSFUL for missing parameters",
+                                "INFO",
+                                "DLHD")
                             return result
                     except Exception as e:
                         enhanced_log(
-                            f"[AUTH] ❌ Nuovo flusso fallito: {e}", "WARNING", "DLHD")
+                            "[AUTH] New flow failed: %s" % e,
+                            "WARNING",
+                            "DLHD")
 
                     last_error = DLHDExtractorError(
-                        f"Missing params: {missing} and New Flow failed")
+                        "Missing params: %s and New Flow failed" % missing)
                     continue
 
-                iframe_origin = f"https://{iframe_host}"
+                iframe_origin = "https://%s" % iframe_host
                 form_data = {
                     'channelKey': params['channel_key'],
                     'country': params['auth_country'],
@@ -2308,27 +2357,28 @@ class DLHDExtractor:
 
                     if auth_resp.status_code != 200:
                         enhanced_log(
-                            f"[AUTH] HTTP {
-                                auth_resp.status_code}",
+                            "[AUTH] HTTP %s" % auth_resp.status_code,
                             "WARNING",
                             "DLHD")
                         last_error = DLHDExtractorError(
-                            f"Auth HTTP {auth_resp.status_code}")
+                            "Auth HTTP %s" % auth_resp.status_code)
                         continue
 
                     auth_text = auth_resp.text
                     enhanced_log(
-                        f"[AUTH] Risposta: {auth_text[:100]}", "DEBUG", "DLHD")
+                        "[AUTH] Response: %s" % auth_text[:100],
+                        "DEBUG",
+                        "DLHD")
 
                 except Exception as auth_error:
                     enhanced_log(
-                        f"[AUTH] Errore connessione auth2.php: {auth_error}",
+                        "[AUTH] Connection error to auth2.php: %s" % auth_error,
                         "WARNING",
                         "DLHD")
 
-                    # ✅ PRIORITÀ MASSIMA: Attiva IMMEDIATAMENTE il nuovo flusso auth se auth2.php fallisce
+                    # HIGH PRIORITY: Activate new auth flow IMMEDIATELY if auth2.php fails
                     enhanced_log(
-                        "[AUTH] ⚡ Auth2.php fallito - ATTIVO NUOVO FLUSSO IMMEDIATO",
+                        "[AUTH] Auth2.php failed - ACTIVATING NEW FLOW IMMEDIATELY",
                         "INFO",
                         "DLHD")
                     try:
@@ -2336,45 +2386,53 @@ class DLHDExtractor:
                             iframe_url, js_content, embed_headers)
                         if result:
                             enhanced_log(
-                                "[AUTH] ✅ NUOVO FLUSSO RIUSCITO - auth2.php bypassato", "INFO", "DLHD")
+                                "[AUTH] NEW FLOW SUCCESSFUL - auth2.php bypassed",
+                                "INFO",
+                                "DLHD")
                             return result
                     except Exception as new_flow_error:
                         enhanced_log(
-                            f"[AUTH] ❌ Nuovo flusso fallito: {new_flow_error}",
+                            "[AUTH] New flow failed: %s" % new_flow_error,
                             "WARNING",
                             "DLHD")
 
-                    # Fallback: aggiorna config solo se necessario
+                    # Fallback: update config only if necessary
                     if iframe_host == hosts_to_try[0] and not self._config_refreshed and '403' in str(
                             auth_error):
                         enhanced_log(
-                            "[AUTH] Errore 403, aggiorno configurazione come fallback", "INFO", "DLHD")
+                            "[AUTH] 403 error, updating configuration as fallback",
+                            "INFO",
+                            "DLHD")
                         self._config_refreshed = True
                         if self._fetch_iframe_hosts():
                             enhanced_log(
-                                f"[AUTH] Config aggiornata, nuovo auth_url: {
-                                    self.auth_url}", "INFO", "DLHD")
+                                "[AUTH] Config updated, new auth_url: %s" % self.auth_url,
+                                "INFO",
+                                "DLHD")
 
                     last_error = DLHDExtractorError(
-                        f"Auth failed and New Flow failed: {auth_error}")
+                        "Auth failed and New Flow failed: %s" % auth_error)
                     continue
 
-                # Validazione risposta auth
+                # Auth response validation
                 if 'Blocked' in auth_text or 'bad params' in auth_text.lower():
                     enhanced_log(
-                        f"[AUTH] Risposta auth invalida: {auth_text[:50]}", "WARNING", "DLHD")
+                        "[AUTH] Invalid auth response: %s" % auth_text[:50],
+                        "WARNING",
+                        "DLHD")
 
-                    # Se è il primo host e auth fallisce, prova a refreshare
-                    # config
+                    # If first host and auth fails, try to refresh config
                     if iframe_host == hosts_to_try[0] and not self._config_refreshed:
                         enhanced_log(
-                            "[AUTH] Auth fallito, provo ad aggiornare config", "INFO", "DLHD")
+                            "[AUTH] Auth failed, attempting config update",
+                            "INFO",
+                            "DLHD")
                         self._config_refreshed = True
                         if self._fetch_iframe_hosts():
                             enhanced_log(
-                                f"[AUTH] Config aggiornata, nuovo auth_url: {
-                                    self.auth_url}", "INFO", "DLHD")
-                            # Riprova auth con nuovo URL
+                                "[AUTH] Config updated, new auth_url: %s" % self.auth_url,
+                                "INFO",
+                                "DLHD")
                             try:
                                 auth_resp = self._http_post(
                                     self.auth_url,
@@ -2384,15 +2442,19 @@ class DLHDExtractor:
                                 )
                                 auth_text = auth_resp.text
                                 enhanced_log(
-                                    f"[AUTH] Nuova risposta: {auth_text[:100]}", "DEBUG", "DLHD")
+                                    "[AUTH] New response: %s" % auth_text[:100],
+                                    "DEBUG",
+                                    "DLHD")
                             except Exception as retry_e:
                                 enhanced_log(
-                                    f"[AUTH] Retry fallito: {retry_e}", "WARNING", "DLHD")
+                                    "[AUTH] Retry failed: %s" % retry_e,
+                                    "WARNING",
+                                    "DLHD")
 
-                    # ✅ PRIORITÀ MASSIMA: Se auth è bloccato, attiva IMMEDIATAMENTE nuovo flusso
+                    # HIGH PRIORITY: If auth is blocked, activate new flow IMMEDIATELY
                     if 'Blocked' in auth_text or 'bad params' in auth_text.lower():
                         enhanced_log(
-                            "[AUTH] ⚡ Auth bloccato - ATTIVO NUOVO FLUSSO IMMEDIATO",
+                            "[AUTH] Auth blocked - ACTIVATING NEW FLOW IMMEDIATELY",
                             "WARNING",
                             "DLHD")
                         try:
@@ -2400,37 +2462,42 @@ class DLHDExtractor:
                                 iframe_url, js_content, embed_headers)
                             if result:
                                 enhanced_log(
-                                    "[AUTH] ✅ NUOVO FLUSSO RIUSCITO - auth bloccato bypassato", "INFO", "DLHD")
+                                    "[AUTH] NEW FLOW SUCCESSFUL - auth bypassed",
+                                    "INFO",
+                                    "DLHD")
                                 return result
                         except Exception as e:
                             enhanced_log(
-                                f"[AUTH] ❌ Nuovo flusso (fallback) fallito: {e}", "WARNING", "DLHD")
+                                "[AUTH] New flow (fallback) failed: %s" % e,
+                                "WARNING",
+                                "DLHD")
 
                         last_error = DLHDExtractorError(
-                            f"Auth blocked: {auth_text} AND New Flow failed")
+                            "Auth blocked: %s AND New Flow failed" % auth_text)
                         continue
 
-                # Prova parsing JSON
+                # Try JSON parsing
                 try:
                     auth_data = json.loads(auth_text)
                     if not (auth_data.get('success')
                             or auth_data.get('valid')):
                         enhanced_log(
-                            f"[AUTH] Auth fallito: {auth_data}", "WARNING", "DLHD")
+                            "[AUTH] Auth failed: %s" % auth_data,
+                            "WARNING",
+                            "DLHD")
                         last_error = DLHDExtractorError(
-                            f"Auth failed: {auth_data}")
+                            "Auth failed: %s" % auth_data)
                         continue
                 except json.JSONDecodeError:
-                    # Se non è JSON, considera valido se non contiene errori
+                    # If not JSON, consider valid if it does not contain errors
                     pass
 
-                enhanced_log("[AUTH] Autenticazione riuscita", "INFO", "DLHD")
+                enhanced_log("[AUTH] Authentication successful", "INFO", "DLHD")
 
-                # Step 4: Server Lookup (COME EASYPROXY)
+                # Step 4: Server Lookup (LIKE EASYPROXY)
                 enhanced_log("[LOOKUP] Server lookup", "DEBUG", "DLHD")
-                server_lookup_url = f"{
-                    self.server_lookup_url}?channel_id={
-                    params['channel_key']}"
+                server_lookup_url = "%s?channel_id=%s" % (
+                    self.server_lookup_url, params['channel_key'])
                 lookup_headers = {
                     'User-Agent': user_agent,
                     'Accept': '*/*',
@@ -2442,8 +2509,7 @@ class DLHDExtractor:
                     server_lookup_url, headers=lookup_headers, timeout=5)
                 if lookup_resp.status_code != 200:
                     last_error = DLHDExtractorError(
-                        f"Server lookup failed: {
-                            lookup_resp.status_code}")
+                        "Server lookup failed: %s" % lookup_resp.status_code)
                     continue
 
                 server_data = lookup_resp.json()
@@ -2451,21 +2517,21 @@ class DLHDExtractor:
 
                 if not server_key:
                     last_error = DLHDExtractorError(
-                        f"No server_key: {server_data}")
+                        "No server_key: %s" % server_data)
                     continue
 
                 enhanced_log(
-                    f"[LOOKUP] Server key: {server_key}",
+                    "[LOOKUP] Server key: %s" % server_key,
                     "INFO",
                     "DLHD")
 
-                # Step 5: Heartbeat (NECESSARIO come EasyProxy)
+                # Step 5: Heartbeat (NECESSARY like EasyProxy)
                 channel_key = params['channel_key']
                 auth_token = params['auth_token']
 
                 heartbeat_headers = {
                     'User-Agent': user_agent,
-                    'Authorization': f'Bearer {auth_token}',
+                    'Authorization': 'Bearer %s' % auth_token,
                     'X-Channel-Key': channel_key,
                     'Referer': iframe_url,
                     'Origin': iframe_origin,
@@ -2473,41 +2539,41 @@ class DLHDExtractor:
 
                 try:
                     enhanced_log(
-                        "[HEARTBEAT] Invio heartbeat", "DEBUG", "DLHD")
+                        "[HEARTBEAT] Sending heartbeat",
+                        "DEBUG",
+                        "DLHD")
                     hb_resp = self._http_get(
                         self.heartbeat_url, headers=heartbeat_headers, timeout=5)
                     enhanced_log(
-                        f"[HEARTBEAT] Risposta: {
-                            hb_resp.status_code}", "DEBUG", "DLHD")
+                        "[HEARTBEAT] Response: %s" % hb_resp.status_code,
+                        "DEBUG",
+                        "DLHD")
                 except Exception as hb_e:
                     enhanced_log(
-                        f"[HEARTBEAT] Fallito: {hb_e}", "WARNING", "DLHD")
-                    # Non blocchiamo l'estrazione se il heartbeat fallisce
+                        "[HEARTBEAT] Failed: %s" % hb_e,
+                        "WARNING",
+                        "DLHD")
+                    # Do not block extraction if heartbeat fails
 
-                # Step 6: Build final URL (COME EASYPROXY con template
-                # dinamici)
+                # Step 6: Build final URL (LIKE EASYPROXY with dynamic templates)
                 if server_key == 'top1/cdn':
-                    # Usa stream_cdn_template ma forza .m3u8
                     stream_url = self.stream_cdn_template.replace(
                         '{CHANNEL}', channel_key)
-                    # ✅ CORREZIONE CRITICA: Forza sempre .m3u8 per evitare segmenti .html/.css
                 else:
-                    # Usa stream_other_template ma forza .m3u8
                     stream_url = self.stream_other_template.replace(
                         '{SERVER_KEY}', server_key).replace(
                         '{CHANNEL}', channel_key)
-                    # ✅ CORREZIONE CRITICA: Forza sempre .m3u8 per evitare segmenti .html/.css
 
-                enhanced_log("[BUILD] Stream URL costruito", "INFO", "DLHD")
+                enhanced_log("[BUILD] Stream URL built", "INFO", "DLHD")
 
-                # Genera X-Client-Token (come EasyProxy)
+                # Generate X-Client-Token (like EasyProxy)
                 auth_ts = params.get('auth_ts', '')
                 auth_country = params.get('auth_country', 'IT')
                 screen_res = "1920x1080"
                 timezone = "Europe/Rome"
                 lang = "it-IT"
-                fingerprint = f"{user_agent}|{screen_res}|{timezone}|{lang}"
-                sign_data = f"{channel_key}|{auth_country}|{auth_ts}|{user_agent}|{fingerprint}"
+                fingerprint = "%s|%s|%s|%s" % (user_agent, screen_res, timezone, lang)
+                sign_data = "%s|%s|%s|%s|%s" % (channel_key, auth_country, auth_ts, user_agent, fingerprint)
                 client_token = base64.b64encode(
                     sign_data.encode('utf-8')).decode('utf-8')
 
@@ -2515,13 +2581,13 @@ class DLHDExtractor:
                     'User-Agent': user_agent,
                     'Referer': iframe_url,
                     'Origin': iframe_origin,
-                    'Authorization': f'Bearer {auth_token}',
+                    'Authorization': 'Bearer %s' % auth_token,
                     'X-Channel-Key': channel_key,
                     'Heartbeat-Url': self.heartbeat_url,
                     'X-Client-Token': client_token,
                 }
 
-                # Calcola expires_at
+                # Calculate expires_at
                 expires_at = None
                 try:
                     if params.get('auth_expiry'):
@@ -2529,11 +2595,11 @@ class DLHDExtractor:
                 except (ValueError, TypeError):
                     pass
 
-                # Reset flag per permettere futuri refresh
+                # Reset flag to allow future refreshes
                 self._config_refreshed = False
 
                 enhanced_log(
-                    "[EXTRACT] Estrazione completata con successo",
+                    "[EXTRACT] Extraction completed successfully",
                     "INFO",
                     "DLHD")
                 return {
@@ -2546,64 +2612,62 @@ class DLHDExtractor:
 
             except Exception as e:
                 enhanced_log(
-                    f"[DIRECT_IFRAME] Errore con {iframe_host}: {e}",
+                    "[DIRECT_IFRAME] Error with %s: %s" % (iframe_host, e),
                     "WARNING",
                     "DLHD")
                 last_error = e
                 continue
 
         raise DLHDExtractorError(
-            f"Tutti gli host iframe hanno fallito. Ultimo errore: {last_error}")
+            "All iframe hosts failed. Last error: %s" % last_error)
 
     def extract_stream(self, url, force_refresh=False):
-        """Metodo principale di estrazione - Compatibile con AppCore"""
+        """Main extraction method - Compatible with AppCore."""
         enhanced_log(
-            "[EXTRACT] === INIZIO ESTRAZIONE DLHD OTTIMIZZATA ===",
+            "[EXTRACT] === STARTING OPTIMISED DLHD EXTRACTION ===",
             "INFO",
             "DLHD")
-        enhanced_log(f"[EXTRACT] URL: {url[:80]}...", "INFO", "DLHD")
+        enhanced_log("[EXTRACT] URL: %s..." % url[:80], "INFO", "DLHD")
 
         self.stats['requests'] += 1
 
         if not self.is_daddylive_link(url):
-            enhanced_log("[EXTRACT] Non è un link DaddyLive", "ERROR", "DLHD")
-            raise DLHDExtractorError("Non è un link DaddyLive")
+            enhanced_log("[EXTRACT] Not a DaddyLive link", "ERROR", "DLHD")
+            raise DLHDExtractorError("Not a DaddyLive link")
 
         channel_id = self.extract_channel_id(url)
         if not channel_id:
-            enhanced_log("[EXTRACT] Channel ID non trovato", "ERROR", "DLHD")
-            raise DLHDExtractorError("Channel ID non trovato")
+            enhanced_log("[EXTRACT] Channel ID not found", "ERROR", "DLHD")
+            raise DLHDExtractorError("Channel ID not found")
 
-        enhanced_log(f"[EXTRACT] Channel ID: {channel_id}", "INFO", "DLHD")
+        enhanced_log("[EXTRACT] Channel ID: %s" % channel_id, "INFO", "DLHD")
 
-        # Controlla cache se non force_refresh
+        # Check cache if not force_refresh
         if not force_refresh:
-            # ✅ CORREZIONE: Forza sempre nuovo download se cache contiene .css
             if not force_refresh and self._validate_cache(channel_id):
                 enhanced_log(
-                    f"[EXTRACT] Cache hit per canale {channel_id}",
+                    "[EXTRACT] Cache hit for channel %s" % channel_id,
                     "INFO",
                     "DLHD")
                 self.stats['cache_hits'] += 1
                 return self._stream_cache[channel_id]
 
         enhanced_log(
-            f"[EXTRACT] Avvio estrazione per {channel_id}",
+            "[EXTRACT] Starting extraction for %s" % channel_id,
             "INFO",
             "DLHD")
 
-        # Usa un lock per prevenire estrazioni simultanee per lo stesso canale
-        # (come EasyProxy)
+        # Use a lock to prevent simultaneous extractions for the same channel (like EasyProxy)
         if channel_id not in self._extraction_locks:
             self._extraction_locks[channel_id] = threading.Lock()
 
         lock = self._extraction_locks[channel_id]
         with lock:
-            # Ricontrolla la cache dopo aver acquisito il lock
+            # Recheck cache after acquiring lock
             if not force_refresh and channel_id in self._stream_cache:
                 if self._validate_cache(channel_id):
                     enhanced_log(
-                        f"[EXTRACT] Dati per il canale {channel_id} trovati in cache dopo lock",
+                        "[EXTRACT] Data for channel %s found in cache after lock" % channel_id,
                         "INFO",
                         "DLHD")
                     self.stats['cache_hits'] += 1
@@ -2611,113 +2675,114 @@ class DLHDExtractor:
 
             try:
                 enhanced_log(
-                    "[EXTRACT] Provo nuovo processo DLStreams diretto",
+                    "[EXTRACT] Trying new DLStreams direct process",
                     "INFO",
                     "DLHD")
                 result = self._extract_dlstreams_process(url, channel_id)
             except Exception as dlstreams_error:
                 enhanced_log(
-                    f"[EXTRACT] Processo DLStreams diretto fallito: {dlstreams_error}",
+                    "[EXTRACT] DLStreams direct process failed: %s" % dlstreams_error,
                     "WARNING",
                     "DLHD")
                 try:
                     result = self._get_stream_data_direct(
                         channel_id, self.iframe_hosts)
                 except DLHDExtractorError:
-                    # Se fallisce con gli host correnti, prova ad aggiornarli
+                    # If it fails with current hosts, try to update them
                     enhanced_log(
-                        "[EXTRACT] Tutti gli host correnti hanno fallito. Tento aggiornamento lista host",
+                        "[EXTRACT] All current hosts failed. Attempting host list update",
                         "WARNING",
                         "DLHD")
                     if self._fetch_iframe_hosts():
                         enhanced_log(
-                            f"[EXTRACT] Riprovo con nuovi host: {
-                                self.iframe_hosts}", "INFO", "DLHD")
+                            "[EXTRACT] Retrying with new hosts: %s" % self.iframe_hosts,
+                            "INFO",
+                            "DLHD")
                         result = self._get_stream_data_direct(
                             channel_id, self.iframe_hosts)
                     else:
                         raise
 
             if result:
-                # Salva in cache
+                # Save to cache
                 self._stream_cache[channel_id] = result
                 self._save_cache()
                 enhanced_log(
-                    "[EXTRACT] Risultato salvato in cache",
+                    "[EXTRACT] Result saved to cache",
                     "INFO",
                     "DLHD")
 
-                # Log statistiche
+                # Log statistics
                 self.stats['successful_extractions'] += 1
                 enhanced_log(
-                    f"[STATS] Requests: {
-                        self.stats['requests']}, Cache hits: {
-                        self.stats['cache_hits']}, Success: {
-                        self.stats['successful_extractions']}",
+                    "[STATS] Requests: %d, Cache hits: %d, Success: %d" % (
+                        self.stats['requests'],
+                        self.stats['cache_hits'],
+                        self.stats['successful_extractions']),
                     "DEBUG",
                     "DLHD")
 
                 enhanced_log(
-                    "[EXTRACT] === ESTRAZIONE COMPLETATA CON SUCCESSO ===",
+                    "[EXTRACT] === EXTRACTION COMPLETED SUCCESSFULLY ===",
                     "INFO",
                     "DLHD")
                 return result
             else:
                 raise DLHDExtractorError(
-                    "Estrazione fallita dopo tutti i tentativi")
+                    "Extraction failed after all attempts")
 
     def invalidate_cache_for_url(self, url):
-        """Invalida cache per URL specifico"""
+        """Invalidate cache for a specific URL."""
         channel_id = self.extract_channel_id(url)
         if channel_id and channel_id in self._stream_cache:
             del self._stream_cache[channel_id]
             self._save_cache()
             enhanced_log(
-                f"[CACHE] Invalidata per canale {channel_id}",
+                "[CACHE] Invalidated for channel %s" % channel_id,
                 "INFO",
                 "DLHD")
 
     def get_stats(self):
-        """Restituisce statistiche di utilizzo"""
+        """Return usage statistics."""
         return self.stats.copy()
 
     def close(self):
-        """Chiude sessione e salva statistiche"""
+        """Close session and save statistics."""
         if self.session:
             try:
                 self.session.close()
-                enhanced_log("[CLOSE] Sessione chiusa", "DEBUG", "DLHD")
+                enhanced_log("[CLOSE] Session closed", "DEBUG", "DLHD")
             except BaseException:
                 pass
 
-        # Salva statistiche finali
-        enhanced_log(f"[FINAL_STATS] {self.stats}", "INFO", "DLHD")
+        # Save final statistics
+        enhanced_log("[FINAL_STATS] %s" % self.stats, "INFO", "DLHD")
 
-# Funzione di compatibilità per AppCore
+# Compatibility function for AppCore
 
 
 def create_dlhd_extractor():
-    """Factory function per creare l'extractor ottimizzato"""
+    """Factory function to create the optimised extractor."""
     return DLHDExtractor()
 
-# Test function per debug
+# Test function for debugging
 
 
 def test_extraction(url):
-    """Funzione di test per debug"""
+    """Test function for debugging."""
     extractor = DLHDExtractor()
     try:
         result = extractor.extract_stream(url)
-        print(f"Estrazione riuscita: {result}")
+        print("Extraction successful: %s" % result)
         return result
     except Exception as e:
-        print(f"Estrazione fallita: {e}")
+        print("Extraction failed: %s" % e)
         return None
     finally:
         extractor.close()
 
 
 if __name__ == "__main__":
-    # Test con URL di esempio
+    # Test with example URL
     test_url = "https://daddyhd.com/watch.php?id=850"
     test_extraction(test_url)

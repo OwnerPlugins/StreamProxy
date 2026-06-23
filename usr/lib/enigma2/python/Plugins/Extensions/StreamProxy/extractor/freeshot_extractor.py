@@ -1,5 +1,6 @@
+# -*- coding: utf-8 -*-
 # freeshot_extractor.py - Freeshot (https://www.freeshot.live/live-tv)
-# Extractor per Enigma2
+# Extractor for Enigma2
 import re
 from urllib.parse import urlparse, quote
 
@@ -15,7 +16,7 @@ except (ImportError, ValueError):
         from StreamProxyLog import enhanced_log
     except ImportError:
         def enhanced_log(msg, level="INFO", tag="FREESHOT"):
-            print(f"[{level}] [{tag}] {msg}")
+            print("[%s] [%s] %s" % (level, tag, msg))
 
 
 class ExtractorError(Exception):
@@ -84,13 +85,13 @@ class FreeshotExtractor:
                 video_url = m3u8_url.replace(
                     'index.fmp4.m3u8', 'tracks-v1/index.fmp4.m3u8')
                 enhanced_log(
-                    f"URL corretto da index.fmp4.m3u8 a tracks-v1/index.fmp4.m3u8",
+                    "URL fixed from index.fmp4.m3u8 to tracks-v1/index.fmp4.m3u8",
                     "INFO",
                     "FREESHOT")
                 return video_url
             return m3u8_url
         except Exception as e:
-            enhanced_log(f"Errore fix video URL: {e}", "DEBUG", "FREESHOT")
+            enhanced_log("Error fixing video URL: %s" % e, "DEBUG", "FREESHOT")
             return m3u8_url
 
     def is_freeshot_link(self, url):
@@ -105,20 +106,22 @@ class FreeshotExtractor:
 
     def extract(self, url, **kwargs):
         if not self.session:
-            raise ExtractorError("Modulo requests non disponibile")
+            raise ExtractorError("Requests module not available")
 
-        # Gestione URL lovecdn.ru diretto
+        # Handle direct lovecdn.ru URL
         if 'lovecdn.ru' in url.lower() and url.startswith('http'):
             enhanced_log(
-                f"FreeshotExtractor: URL lovecdn.ru diretto: {url[:100]}...", "INFO", "FREESHOT")
+                "FreeshotExtractor: Direct lovecdn.ru URL: %s..." % url[:100],
+                "INFO",
+                "FREESHOT")
             url = self.fix_video_url(url, self.base_headers)
             parsed = urlparse(url)
-            base_url = f"{parsed.scheme}://{parsed.netloc}/"
+            base_url = "%s://%s/" % (parsed.scheme, parsed.netloc)
             token_match = re.search(r'token=([^&]+)', url)
             token = token_match.group(1) if token_match else 'default'
             channel_path = parsed.path.split(
                 '/')[1] if len(parsed.path.split('/')) > 1 else 'SkySport24IT'
-            embed_referer = f"{base_url}{channel_path}/embed.html?token={token}"
+            embed_referer = "%s%s/embed.html?token=%s" % (base_url, channel_path, token)
 
             return {
                 "resolved_url": url,
@@ -131,10 +134,10 @@ class FreeshotExtractor:
                 "base_url": base_url
             }
 
-        # Gestione URL player già risolto
+        # Handle already resolved player URL
         if 'popcdn.day/player/' in url.lower() and url.startswith('http'):
             enhanced_log(
-                f"FreeshotExtractor: URL player già risolto: {url}",
+                "FreeshotExtractor: Already resolved player URL: %s" % url,
                 "INFO",
                 "FREESHOT")
 
@@ -143,7 +146,7 @@ class FreeshotExtractor:
                 if response.status_code == 200:
                     body = response.text
 
-                    # Cerca URL M3U8 nella pagina
+                    # Look for M3U8 URL in the page
                     patterns = [
                         r'"([^"]*\.m3u8[^"]*)"',
                         r"'([^']*\.m3u8[^']*)'",
@@ -162,7 +165,7 @@ class FreeshotExtractor:
                             break
 
                     if m3u8_url:
-                        # Pulisci caratteri di escape JSON
+                        # Clean JSON escape characters
                         m3u8_url = m3u8_url.replace('\\/', '/')
 
                         if not m3u8_url.startswith('http'):
@@ -174,7 +177,7 @@ class FreeshotExtractor:
                         m3u8_url = self.fix_video_url(
                             m3u8_url, self.base_headers)
                         enhanced_log(
-                            f"FreeshotExtractor: M3U8 estratto -> {m3u8_url}",
+                            "FreeshotExtractor: Extracted M3U8 -> %s" % m3u8_url,
                             "INFO",
                             "FREESHOT")
 
@@ -190,16 +193,16 @@ class FreeshotExtractor:
                         }
             except Exception as e:
                 enhanced_log(
-                    f"Errore estrazione da pagina player: {e}",
+                    "Error extracting from player page: %s" % e,
                     "DEBUG",
                     "FREESHOT")
 
             # Fallback
             channel_code = url.rstrip('/').split('/')[-1]
-            m3u8_url = f"https://popcdn.day/stream/{channel_code}/index.fmp4.m3u8"
+            m3u8_url = "https://popcdn.day/stream/%s/index.fmp4.m3u8" % channel_code
             m3u8_url = self.fix_video_url(m3u8_url, self.base_headers)
             enhanced_log(
-                f"FreeshotExtractor: M3U8 fallback -> {m3u8_url}",
+                "FreeshotExtractor: Fallback M3U8 -> %s" % m3u8_url,
                 "INFO",
                 "FREESHOT")
 
@@ -214,7 +217,7 @@ class FreeshotExtractor:
                 "base_url": "https://popcdn.day/"
             }
 
-        # Estrai codice canale da freeshot.live URL
+        # Extract channel code from freeshot.live URL
         channel_code = None
         if 'freeshot.live' in url.lower():
             parts = url.rstrip('/').split('/')
@@ -225,7 +228,7 @@ class FreeshotExtractor:
                 channel_code = self.channel_map.get(channel_id)
                 if channel_code:
                     enhanced_log(
-                        f"ID: {channel_id} -> Canale: {channel_code}",
+                        "ID: %s -> Channel: %s" % (channel_id, channel_code),
                         "DEBUG",
                         "FREESHOT")
                 else:
@@ -233,28 +236,27 @@ class FreeshotExtractor:
                     channel_code = self.channel_map.get(normalized_name)
                     if channel_code:
                         enhanced_log(
-                            f"Nome: {channel_name} -> {channel_code}",
+                            "Name: %s -> %s" % (channel_name, channel_code),
                             "DEBUG",
                             "FREESHOT")
                     else:
                         channel_code = channel_name
                         enhanced_log(
-                            f"Fallback: {channel_name} -> {channel_code}",
+                            "Fallback: %s -> %s" % (channel_name, channel_code),
                             "DEBUG",
                             "FREESHOT")
 
         if channel_code:
-            target_url = f"https://popcdn.day/go.php?stream={
-                quote(channel_code)}"
+            target_url = "https://popcdn.day/go.php?stream=%s" % quote(channel_code)
         elif not url.startswith('http'):
-            target_url = f"https://popcdn.day/go.php?stream={quote(url)}"
+            target_url = "https://popcdn.day/go.php?stream=%s" % quote(url)
         elif "popcdn.day" not in url and 'lovecdn.ru' not in url:
-            target_url = f"https://popcdn.day/go.php?stream={quote(url)}"
+            target_url = "https://popcdn.day/go.php?stream=%s" % quote(url)
         else:
             target_url = url
 
         enhanced_log(
-            f"FreeshotExtractor: Risoluzione {target_url} (codice: {channel_code})",
+            "FreeshotExtractor: Resolving %s (code: %s)" % (target_url, channel_code),
             "INFO",
             "FREESHOT")
 
@@ -262,8 +264,7 @@ class FreeshotExtractor:
             response = self.session.get(target_url, timeout=15)
             if response.status_code != 200:
                 raise ExtractorError(
-                    f"Freeshot request failed: {
-                        response.status_code}")
+                    "Freeshot request failed: %s" % response.status_code)
 
             body = response.text
             match = re.search(
@@ -279,11 +280,11 @@ class FreeshotExtractor:
             m3u8_url = self.fix_video_url(m3u8_url, self.base_headers)
 
             enhanced_log(
-                f"FreeshotExtractor: Risolto -> {m3u8_url}",
+                "FreeshotExtractor: Resolved -> %s" % m3u8_url,
                 "INFO",
                 "FREESHOT")
             enhanced_log(
-                f"FreeshotExtractor: Iframe URL -> {iframe_url}",
+                "FreeshotExtractor: Iframe URL -> %s" % iframe_url,
                 "DEBUG",
                 "FREESHOT")
 
@@ -292,26 +293,25 @@ class FreeshotExtractor:
                 "headers": {
                     "User-Agent": self.base_headers["User-Agent"],
                     "Referer": iframe_url,
-                    "Origin": f"https://{urlparse(iframe_url).netloc}"
+                    "Origin": "https://%s" % urlparse(iframe_url).netloc
                 },
                 "stream_type": "fmp4",
-                "base_url": f"https://{urlparse(iframe_url).netloc}/"
+                "base_url": "https://%s/" % urlparse(iframe_url).netloc
             }
 
             enhanced_log(
-                f"FreeshotExtractor: Stream type -> fMP4",
+                "FreeshotExtractor: Stream type -> fMP4",
                 "DEBUG",
                 "FREESHOT")
             return result
         except Exception as e:
-            enhanced_log(f"FreeshotExtractor error: {e}", "ERROR", "FREESHOT")
+            enhanced_log("FreeshotExtractor error: %s" % e, "ERROR", "FREESHOT")
             import traceback
             enhanced_log(
-                f"FreeshotExtractor traceback: {
-                    traceback.format_exc()}",
+                "FreeshotExtractor traceback: %s" % traceback.format_exc(),
                 "DEBUG",
                 "FREESHOT")
-            raise ExtractorError(f"Freeshot extraction failed: {str(e)}")
+            raise ExtractorError("Freeshot extraction failed: %s" % str(e))
 
     def close(self):
         if self.session:

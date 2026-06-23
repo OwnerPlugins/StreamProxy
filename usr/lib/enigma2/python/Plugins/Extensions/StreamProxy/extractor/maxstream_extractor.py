@@ -1,11 +1,10 @@
-# maxstream_extractor.py - Maxstream Extractor per Enigma2
-# Compatibile con Python 3 e decoder Enigma2
+# -*- coding: utf-8 -*-
+# maxstream_extractor.py - Maxstream Extractor for Enigma2
+# Compatible with Python 3 and Enigma2 decoders
 
 import re
 import time
 import random
-import base64
-from urllib.parse import urlparse, urljoin
 
 try:
     import requests
@@ -32,7 +31,7 @@ except (ImportError, ValueError):
         from StreamProxyLog import enhanced_log
     except ImportError:
         def enhanced_log(msg, level="INFO", tag="Maxstream"):
-            print(f"[{level}] [{tag}] {msg}")
+            print("[%s] [%s] %s" % (level, tag, msg))
 
 try:
     from bs4 import BeautifulSoup
@@ -40,25 +39,25 @@ try:
 except ImportError:
     BS4_AVAILABLE = False
     enhanced_log(
-        "BeautifulSoup non disponibile, parsing HTML limitato",
+        "BeautifulSoup not available, HTML parsing limited",
         "WARNING",
         "Maxstream")
 
 
 class MaxstreamExtractorError(Exception):
-    """Eccezione specifica per errori Maxstream"""
+    """Specific exception for Maxstream errors."""
     pass
 
 
 class MaxstreamExtractor:
     """
-    Maxstream Extractor per Enigma2
-    Estrae URL stream da uprot.net e maxstream.video
+    Maxstream Extractor for Enigma2.
+    Extracts stream URLs from uprot.net and maxstream.video.
     """
 
     def __init__(self, request_headers=None):
         enhanced_log(
-            "Inizializzazione MaxstreamExtractor per Enigma2",
+            "Initialising MaxstreamExtractor for Enigma2",
             "INFO",
             "Maxstream")
 
@@ -79,7 +78,7 @@ class MaxstreamExtractor:
         if request_headers:
             self.base_headers.update(request_headers)
 
-        # Sessione HTTP persistente
+        # Persistent HTTP session
         if REQUESTS_AVAILABLE:
             self.session = requests.Session()
             retry_kwargs = dict(
@@ -111,20 +110,20 @@ class MaxstreamExtractor:
             self.session.mount('https://', adapter)
             self.session.headers.update(self.base_headers)
             self.session.verify = False
-            enhanced_log("Sessione HTTP configurata", "DEBUG", "Maxstream")
+            enhanced_log("HTTP session configured", "DEBUG", "Maxstream")
         else:
             self.session = None
             enhanced_log(
-                "Modulo requests non disponibile",
+                "Requests module not available",
                 "WARNING",
                 "Maxstream")
 
         self.mediaflow_endpoint = "hls_proxy"
 
     def _http_request(self, method, url, headers=None, timeout=8, **kwargs):
-        """Richiesta HTTP sincrona con retry leggero"""
+        """Synchronous HTTP request with light retry."""
         if not self.session:
-            raise MaxstreamExtractorError("Sessione HTTP non disponibile")
+            raise MaxstreamExtractorError("HTTP session not available")
 
         request_headers = dict(self.base_headers)
         if headers:
@@ -155,21 +154,25 @@ class MaxstreamExtractor:
                     return response
 
                 enhanced_log(
-                    f"HTTP {response.status_code}, retry: {url[:90]}", "DEBUG", "Maxstream")
+                    "HTTP %s, retry: %s" % (response.status_code, url[:90]),
+                    "DEBUG",
+                    "Maxstream")
                 last_error = MaxstreamExtractorError(
-                    f"HTTP {response.status_code}")
+                    "HTTP %s" % response.status_code)
                 time.sleep(0.3)
             except Exception as exc:
                 last_error = exc
                 enhanced_log(
-                    f"Errore {method} {url[:90]}: {exc}", "DEBUG", "Maxstream")
+                    "Error %s %s: %s" % (method, url[:90], exc),
+                    "DEBUG",
+                    "Maxstream")
                 if attempt:
                     break
                 time.sleep(0.3)
 
         if last_error:
             raise last_error
-        raise MaxstreamExtractorError("Richiesta HTTP fallita")
+        raise MaxstreamExtractorError("HTTP request failed")
 
     def _http_get(self, url, headers=None, timeout=8, **kwargs):
         return self._http_request(
@@ -180,8 +183,8 @@ class MaxstreamExtractor:
             **kwargs)
 
     def _parse_uprot_html(self, text):
-        """Parse uprot HTML per estrarre link redirect"""
-        # 1. Link diretti
+        """Parse uprot HTML to extract redirect link."""
+        # 1. Direct links
         match = re.search(
             r'https?://(?:www\.)?(?:stayonline\.pro|maxstream\.video)[^"\'\s<>\\ ]+',
             text.replace(
@@ -206,7 +209,7 @@ class MaxstreamExtractor:
         if BS4_AVAILABLE:
             soup = BeautifulSoup(text, "html.parser")
 
-            # Cerca bottoni/link con testo "Continue"
+            # Look for buttons/links with "Continue" text
             for btn in soup.find_all(["a", "button"]):
                 text_content = btn.get_text().strip().lower()
                 if any(
@@ -221,7 +224,7 @@ class MaxstreamExtractor:
                     if href and "uprot" not in href:
                         return href
 
-            # Selettori specifici Bulma
+            # Bulma specific selectors
             for selector in [
                 'a[href*="maxstream"]',
                 'a[href*="stayonline"]',
@@ -240,26 +243,26 @@ class MaxstreamExtractor:
         return None
 
     def _parse_uprot_folder(self, text, season, episode):
-        """Parse folder HTML per trovare episodio specifico"""
+        """Parse folder HTML to find specific episode."""
         try:
             s_int = int(season)
             e_int = int(episode)
         except (TypeError, ValueError):
             return None
 
-        s_pad = f"{s_int:02d}"
-        e_pad = f"{e_int:02d}"
+        s_pad = "%02d" % s_int
+        e_pad = "%02d" % e_int
 
         patterns = [
-            rf"S{s_pad}E{e_pad}",
-            rf"\b0*{s_int}x0*{e_int}\b",
-            rf"\b0*{s_int}&#215;0*{e_int}\b",
-            rf"\b0*{s_int}×0*{e_int}\b",
+            r"S%sE%s" % (s_pad, e_pad),
+            r"\b0*%dx0*%d\b" % (s_int, e_int),
+            r"\b0*%d&#215;0*%d\b" % (s_int, e_int),
+            r"\b0*%d×0*%d\b" % (s_int, e_int),
         ]
 
         for pat in patterns:
             m = re.search(
-                rf"{pat}[\s\S]{{0,500}}?href=['\"]([^'\"]+/msfi/[^'\"]+)['\"]",
+                r"%s[\s\S]{0,500}?href=['\"]([^'\"]+/msfi/[^'\"]+)['\"]" % pat,
                 text,
                 re.I,
             )
@@ -268,23 +271,23 @@ class MaxstreamExtractor:
         return None
 
     def get_uprot(self, link, season=None, episode=None):
-        """Estrae URL Maxstream da uprot redirect"""
-        # Converti /msf/ in /mse/ (legacy alias)
+        """Extract Maxstream URL from uprot redirect."""
+        # Convert /msf/ to /mse/ (legacy alias)
         link = re.sub(r"/msf/", "/mse/", link)
 
-        enhanced_log(f"Richiesta uprot: {link[:80]}...", "INFO", "Maxstream")
+        enhanced_log("Uprot request: %s..." % link[:80], "INFO", "Maxstream")
         text = self._http_get(link).text
 
-        # Se è folder, risolvi episodio
+        # If it's a folder, resolve episode
         if "/msfld/" in link:
             if season is None or episode is None:
                 raise MaxstreamExtractorError(
-                    "msfld richiede parametri season e episode")
+                    "msfld requires season and episode parameters")
 
             episode_link = self._parse_uprot_folder(text, season, episode)
             if not episode_link:
                 raise MaxstreamExtractorError(
-                    f"Episodio S{season}E{episode} non trovato")
+                    "Episode S%sE%s not found" % (season, episode))
 
             link = episode_link
             text = self._http_get(link).text
@@ -300,19 +303,21 @@ class MaxstreamExtractor:
                 "cf-challenge",
                 "ray id",
                 "checking your browser"]):
-            raise MaxstreamExtractorError("Cloudflare block rilevato")
+            raise MaxstreamExtractorError("Cloudflare block detected")
 
         enhanced_log(
-            f"Parse fallito. Content: {text[:500]}...", "ERROR", "Maxstream")
-        raise MaxstreamExtractorError("Link redirect non trovato")
+            "Parse failed. Content: %s..." % text[:500],
+            "ERROR",
+            "Maxstream")
+        raise MaxstreamExtractorError("Redirect link not found")
 
     def extract(self, url, **kwargs):
-        """Estrae URL Maxstream"""
+        """Extract Maxstream URL."""
         season = kwargs.get("season")
         episode = kwargs.get("episode")
 
         maxstream_url = self.get_uprot(url, season=season, episode=episode)
-        enhanced_log(f"Target URL: {maxstream_url}", "DEBUG", "Maxstream")
+        enhanced_log("Target URL: %s" % maxstream_url, "DEBUG", "Maxstream")
 
         headers = {
             **self.base_headers,
@@ -339,9 +344,11 @@ class MaxstreamExtractor:
 
         if not match:
             enhanced_log(
-                f"Packer non trovato in: {text[:500]}...", "ERROR", "Maxstream")
+                "Packer not found in: %s..." % text[:500],
+                "ERROR",
+                "Maxstream")
             raise MaxstreamExtractorError(
-                "Impossibile estrarre componenti URL")
+                "Unable to extract URL components")
 
         s1 = match.group(2)
         terms = s1.split("|")
@@ -352,10 +359,10 @@ class MaxstreamExtractor:
             sources_index = terms.index("sources")
         except ValueError as e:
             enhanced_log(
-                f"Termini mancanti nel packer: {e}",
+                "Missing terms in packer: %s" % e,
                 "ERROR",
                 "Maxstream")
-            raise MaxstreamExtractorError(f"Componenti mancanti: {e}")
+            raise MaxstreamExtractorError("Missing components: %s" % e)
 
         result = terms[urlset_index + 1: hls_index]
         reversed_elements = result[::-1]
@@ -369,7 +376,7 @@ class MaxstreamExtractor:
             else:
                 first_url_part += fp + "-"
 
-        base_url = f"https://{first_url_part.rstrip('-')}.host-cdn.net/hls/"
+        base_url = "https://%s.host-cdn.net/hls/" % first_url_part.rstrip('-')
 
         if len(reversed_elements) == 1:
             final_url = base_url + "," + \
@@ -393,7 +400,7 @@ class MaxstreamExtractor:
 
 
 def is_maxstream_link(url):
-    """Verifica se è un link Maxstream/Uprot"""
+    """Check if it is a Maxstream/Uprot link."""
     if not url:
         return False
     url_lower = url.lower()
@@ -404,6 +411,6 @@ def is_maxstream_link(url):
             'stayonline.pro'])
 
 
-# Factory function per compatibilità
+# Factory function for compatibility
 def create_maxstream_extractor():
     return MaxstreamExtractor()

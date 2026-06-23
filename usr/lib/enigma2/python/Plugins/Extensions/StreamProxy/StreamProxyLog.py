@@ -1,8 +1,9 @@
-# StreamProxyLog.py
+# -*- coding: utf-8 -*-
+# StreamProxyLog.py - Logging module for StreamProxy
+
 import os
 import time
 import sys
-from collections import deque
 import traceback
 import threading
 
@@ -29,8 +30,8 @@ def _safe_print(message):
 class StreamProxyLogger:
     _instance = None
     LOG_FILE = "/usr/lib/enigma2/python/Plugins/Extensions/StreamProxy/streamLogs.txt"
-    MAX_LOG_SIZE = 2 * 1024 * 1024  # 2MB massimo
-    MAX_LINES = 5000  # Massimo 5000 righe
+    MAX_LOG_SIZE = 2 * 1024 * 1024  # 2MB maximum
+    MAX_LINES = 5000  # Maximum 5000 lines
 
     @staticmethod
     def getInstance():
@@ -47,51 +48,50 @@ class StreamProxyLogger:
         self._lock = threading.RLock()
 
         try:
-            # Assicurati che la directory esista con i permessi corretti
+            # Ensure the log directory exists with correct permissions
             log_dir = os.path.dirname(self.LOG_FILE)
             if not os.path.exists(log_dir):
                 try:
                     os.makedirs(log_dir, mode=0o755)
                 except Exception as e:
                     _safe_print(
-                        f"[ERROR] Impossibile creare directory log: {e}")
+                        "[ERROR] Unable to create log directory: %s" % e)
                     return
 
-            # Imposta i permessi del file se esiste
+            # Set file permissions if it exists
             if os.path.exists(self.LOG_FILE):
                 try:
                     os.chmod(self.LOG_FILE, 0o644)
                 except Exception as e:
                     _safe_print(
-                        f"[ERROR] Impossibile impostare i permessi del file: {e}")
+                        "[ERROR] Unable to set file permissions: %s" % e)
 
-            # Apri il file in modalit[?] write per pulirlo
+            # Open the file in write mode to clear it
             with open(self.LOG_FILE, 'w', encoding='utf-8') as f:
                 f.write("")
                 f.flush()
 
-            # Imposta i permessi corretti
+            # Set correct permissions
             os.chmod(self.LOG_FILE, 0o644)
 
-            # Apri il file in append con buffering minimo
+            # Open the file in append mode with minimal buffering
             self._log_file = open(
                 self.LOG_FILE,
                 'a',
                 encoding='utf-8',
                 buffering=1)
-            self._write_log("=== LOG INIZIALIZZATO ===", True)
+            self._write_log("=== LOG INITIALISED ===", True)
 
         except Exception as e:
             _safe_print(
-                f"[ERROR] Errore inizializzazione logger: {
-                    str(e)}\n{
-                    traceback.format_exc()}")
+                "[ERROR] Logger initialisation error: %s\n%s" % (
+                    str(e), traceback.format_exc()))
             self._log_file = None
 
     def _write_log(self, message, add_timestamp=True):
-        """Scrittura effettiva del log con gestione errori migliorata"""
+        """Actual log writing with improved error handling."""
         with self._lock:
-            # Controlla dimensione file prima di scrivere
+            # Check file size before writing
             self._check_and_rotate_log()
             if not self._log_file:
                 try:
@@ -99,44 +99,44 @@ class StreamProxyLogger:
                         self.LOG_FILE, 'a', encoding='utf-8', buffering=1)
                 except Exception as e:
                     _safe_print(
-                        f"[ERROR] Impossibile aprire il file di log: {e}")
+                        "[ERROR] Unable to open log file: %s" % e)
                     return False
 
             try:
                 if add_timestamp:
                     timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
-                    entry = f"[{timestamp}] {message}\n"
+                    entry = "[%s] %s\n" % (timestamp, message)
                 else:
-                    entry = f"{message}\n"
+                    entry = "%s\n" % message
 
                 self._log_file.write(entry)
                 self._log_file.flush()
                 if FSYNC_LOGS:
                     os.fsync(self._log_file.fileno())
                 if CONSOLE_LOGS:
-                    _safe_print(f"[DEBUG] Log scritto: {entry.strip()}")
+                    _safe_print("[DEBUG] Log written: %s" % entry.strip())
                 return True
 
             except IOError as e:
                 _safe_print(
-                    f"[ERROR] Errore I/O durante la scrittura del log: {e}")
-                # Prova a riaprire il file
+                    "[ERROR] I/O error during log write: %s" % e)
+                # Try to reopen the file
                 try:
                     if self._log_file:
                         self._log_file.close()
                     self._log_file = open(
                         self.LOG_FILE, 'a', encoding='utf-8', buffering=1)
                 except Exception as e2:
-                    _safe_print(f"[ERROR] Impossibile riaprire il file: {e2}")
+                    _safe_print("[ERROR] Unable to reopen file: %s" % e2)
                 return False
 
             except Exception as e:
                 _safe_print(
-                    f"[ERROR] Errore generico durante la scrittura del log: {e}")
+                    "[ERROR] Generic error during log write: %s" % e)
                 return False
 
     def _check_and_rotate_log(self):
-        """Controlla la dimensione del log e lo ruota se necessario"""
+        """Check log file size and rotate if necessary."""
         try:
             if not os.path.exists(self.LOG_FILE):
                 return
@@ -145,58 +145,58 @@ class StreamProxyLogger:
             if file_size > self.MAX_LOG_SIZE:
                 self._rotate_log()
         except Exception as e:
-            _safe_print(f"[ERROR] Errore controllo dimensione log: {e}")
+            _safe_print("[ERROR] Log size check error: %s" % e)
 
     def _rotate_log(self):
-        """Ruota il log mantenendo solo le ultime righe"""
+        """Rotate the log file, keeping only the last lines."""
         try:
             _safe_print(
-                f"[INFO] Rotazione log - dimensione attuale: {os.path.getsize(self.LOG_FILE)} bytes")
+                "[INFO] Log rotation - current size: %d bytes" % os.path.getsize(self.LOG_FILE))
 
-            # Chiudi il file corrente
+            # Close the current file
             if self._log_file:
                 self._log_file.close()
                 self._log_file = None
 
-            # Leggi le ultime righe
+            # Read the last lines
             with open(self.LOG_FILE, 'r', encoding='utf-8') as f:
                 lines = f.readlines()
 
-            # Mantieni solo le ultime MAX_LINES righe
+            # Keep only the last MAX_LINES lines
             if len(lines) > self.MAX_LINES:
                 lines = lines[-self.MAX_LINES:]
 
-            # Riscrivi il file con le righe mantenute
+            # Rewrite the file with the kept lines
             with open(self.LOG_FILE, 'w', encoding='utf-8') as f:
-                f.write("=== LOG RUOTATO ===\n")
+                f.write("=== LOG ROTATED ===\n")
                 f.writelines(lines)
                 f.flush()
                 if FSYNC_LOGS:
                     os.fsync(f.fileno())
 
-            # Riapri il file in append
+            # Reopen the file in append mode
             self._log_file = open(
                 self.LOG_FILE,
                 'a',
                 encoding='utf-8',
                 buffering=1)
-            _safe_print(f"[INFO] Log ruotato - mantenute {len(lines)} righe")
+            _safe_print("[INFO] Log rotated - kept %d lines" % len(lines))
 
         except Exception as e:
-            _safe_print(f"[ERROR] Errore rotazione log: {e}")
-            # Fallback: pulisci completamente il log
+            _safe_print("[ERROR] Log rotation error: %s" % e)
+            # Fallback: completely clear the log
             try:
                 with open(self.LOG_FILE, 'w', encoding='utf-8') as f:
-                    f.write("=== LOG RIPULITO DOPO ERRORE ===\n")
+                    f.write("=== LOG CLEARED AFTER ERROR ===\n")
                 self._log_file = open(
                     self.LOG_FILE, 'a', encoding='utf-8', buffering=1)
             except BaseException:
                 pass
 
     def log(self, message, add_timestamp=True):
-        """Metodo pubblico per il logging"""
+        """Public method for logging."""
         if CONSOLE_LOGS:
-            _safe_print(f"[DEBUG] Richiesta log: {message}")
+            _safe_print("[DEBUG] Log request: %s" % message)
         if isinstance(message, str):
             lines = message.split('\n')
         else:
@@ -206,35 +206,35 @@ class StreamProxyLogger:
             self._write_log(line, add_timestamp)
 
     def clear_log(self):
-        """Pulisce il file di log"""
+        """Clear the log file."""
         try:
             if CONSOLE_LOGS:
-                _safe_print("[DEBUG] Richiesta pulizia log")
-            # Chiudi il file se [?] aperto
+                _safe_print("[DEBUG] Log clear request")
+            # Close the file if it is open
             if hasattr(self, '_log_file') and self._log_file:
                 self._log_file.close()
                 self._log_file = None
 
-            # Sovrascrivi il file
+            # Overwrite the file
             with open(self.LOG_FILE, 'w', encoding='utf-8') as f:
                 f.write("")
                 f.flush()
                 if FSYNC_LOGS:
                     os.fsync(f.fileno())
 
-            # Riapri il file in append
+            # Reopen the file in append mode
             self._log_file = open(
                 self.LOG_FILE,
                 'a',
                 encoding='utf-8',
                 buffering=1)
             if CONSOLE_LOGS:
-                _safe_print("[DEBUG] File di log pulito e riaperto")
-            self._write_log("=== LOG INIZIALIZZATO ===")
+                _safe_print("[DEBUG] Log file cleared and reopened")
+            self._write_log("=== LOG INITIALISED ===")
             return True
         except Exception as e:
-            _safe_print(f"[ERROR] Errore pulizia log: {e}")
-            # Prova a riaprire il file anche in caso di errore
+            _safe_print("[ERROR] Log clear error: %s" % e)
+            # Try to reopen the file even on error
             if not hasattr(self, '_log_file') or not self._log_file:
                 try:
                     self._log_file = open(
@@ -244,30 +244,30 @@ class StreamProxyLogger:
             return False
 
     def __del__(self):
-        """Chiude il file di log quando l'oggetto viene distrutto"""
+        """Close the log file when the object is destroyed."""
         if hasattr(self, '_log_file') and self._log_file:
             try:
                 self._log_file.close()
                 if CONSOLE_LOGS:
-                    _safe_print("[DEBUG] File di log chiuso")
+                    _safe_print("[DEBUG] Log file closed")
             except BaseException:
                 pass
 
 
 def enhanced_log(message, level="INFO", component="CORE"):
-    """Funzione di logging migliorata con supporto per componenti e livelli."""
-    # Importa la variabile globale DEBUG_ENABLED
+    """Enhanced logging function with support for components and levels."""
+    # Import the global DEBUG_ENABLED variable
     try:
         from .plugin import DEBUG_ENABLED
         if not DEBUG_ENABLED:
-            return  # Non scrive nulla se debug [?] disabilitato
+            return  # Do not write anything if debug is disabled
     except BaseException:
-        pass  # Se non riesce a importare, continua con il logging normale
+        pass  # If import fails, continue with normal logging
 
     if CONSOLE_LOGS:
         _safe_print(
-            f"[DEBUG] enhanced_log chiamato: [{level}] [{component}] {message}")
+            "[DEBUG] enhanced_log called: [%s] [%s] %s" % (level, component, message))
     timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
-    formatted_message = f"[{timestamp}] [{level}] [{component}] {message}"
+    formatted_message = "[%s] [%s] [%s] %s" % (timestamp, level, component, message)
     logger = StreamProxyLogger.getInstance()
     logger.log(formatted_message, add_timestamp=False)

@@ -1,27 +1,28 @@
-# plugin.py
+# -*- coding: utf-8 -*-
+# plugin.py - StreamProxy main plugin module
+
 from Plugins.Plugin import PluginDescriptor
 from Screens.Screen import Screen
 from Components.ActionMap import ActionMap
 from Components.Label import Label
-from enigma import eTimer
 import os
 import json
 
-# Variabili globali
+# Global variables
 service_monitor = None
 DEBUG_ENABLED = True
 PLUGIN_ENABLED = True
 
 
 def load_config():
-    """Carica la configurazione dal file SPconfig.txt"""
+    """Load configuration from SPconfig.txt file"""
     global DEBUG_ENABLED, PLUGIN_ENABLED
 
-    # Percorso del file di configurazione
+    # Configuration file path
     plugin_dir = os.path.dirname(__file__)
     config_file = os.path.join(plugin_dir, "SPconfig.txt")
 
-    # Configurazione di default
+    # Default configuration
     default_config = {
         "plugin_attivo": "ON",
         "log_abilitato": "ON",
@@ -31,36 +32,36 @@ def load_config():
 
     try:
         if os.path.exists(config_file):
-            # Leggi il file esistente
+            # Read existing file
             with open(config_file, 'r', encoding='utf-8') as f:
                 config = json.load(f)
-            print("[StreamProxy] Configurazione caricata da SPconfig.txt")
+            print("[StreamProxy] Configuration loaded from SPconfig.txt")
         else:
-            # Crea il file con valori di default
+            # Create file with default values
             config = default_config
             with open(config_file, 'w', encoding='utf-8') as f:
                 json.dump(config, f, indent=4, ensure_ascii=False)
-            print("[StreamProxy] Creato SPconfig.txt con valori di default")
+            print("[StreamProxy] Created SPconfig.txt with default values")
 
-        # Imposta le variabili globali
+        # Set global variables
         PLUGIN_ENABLED = (config.get("plugin_attivo", "ON") == "ON")
         DEBUG_ENABLED = (config.get("log_abilitato", "ON") == "ON")
 
-        print(f"[StreamProxy] Plugin attivo: {PLUGIN_ENABLED}")
-        print(f"[StreamProxy] Log abilitato: {DEBUG_ENABLED}")
+        print("[StreamProxy] Plugin active: %s" % PLUGIN_ENABLED)
+        print("[StreamProxy] Log enabled: %s" % DEBUG_ENABLED)
 
         return config
 
     except Exception as e:
-        print(f"[StreamProxy] Errore caricamento config: {e}")
-        # In caso di errore, usa i valori di default
+        print("[StreamProxy] Config loading error: %s" % e)
+        # In case of error, use default values
         PLUGIN_ENABLED = True
         DEBUG_ENABLED = True
         return default_config
 
 
 def save_config(config):
-    """Salva la configurazione nel file SPconfig.txt"""
+    """Save configuration to SPconfig.txt file"""
     try:
         plugin_dir = os.path.dirname(__file__)
         config_file = os.path.join(plugin_dir, "SPconfig.txt")
@@ -68,64 +69,57 @@ def save_config(config):
         with open(config_file, 'w', encoding='utf-8') as f:
             json.dump(config, f, indent=4, ensure_ascii=False)
 
-        print("[StreamProxy] Configurazione salvata in SPconfig.txt")
+        print("[StreamProxy] Configuration saved to SPconfig.txt")
         return True
 
     except Exception as e:
-        print(f"[StreamProxy] Errore salvataggio config: {e}")
+        print("[StreamProxy] Config saving error: %s" % e)
         return False
 
 
 def autostart(reason, **kwargs):
-    """Main entry point del plugin"""
-    if reason == 0:  # Avvio
+    """Main entry point for the plugin"""
+    if reason == 0:  # Startup
         load_config()
-        print("[StreamProxy] Plugin avviato")
-    elif reason == 1:  # Spegnimento
-        print("[StreamProxy] Plugin arrestato")
+        print("[StreamProxy] Plugin started")
+    elif reason == 1:  # Shutdown
+        print("[StreamProxy] Plugin stopped")
 
 
-# plugin.py - VERSIONE CON ENHANCED_LOG
 def sessionstart(reason, **kwargs):
-    """Callback per l'avvio della sessione"""
+    """Session start callback"""
     global service_monitor
 
     if reason == 0:
         if not PLUGIN_ENABLED:
-            print("[StreamProxy] Plugin disabilitato - skip inizializzazione")
+            print("[StreamProxy] Plugin disabled - skipping initialization")
             return
         session = kwargs.get("session", None)
         if session:
             from .StreamProxyLog import enhanced_log
-            enhanced_log("=== INIZIO INIZIALIZZAZIONE ===", "INFO", "PLUGIN")
+            enhanced_log("=== STARTING INITIALIZATION ===", "INFO", "PLUGIN")
 
             try:
-                enhanced_log("1. Importo server...", "DEBUG", "PLUGIN")
+                enhanced_log("1. Importing server...", "DEBUG", "PLUGIN")
                 from . import server
-                enhanced_log("2. Server importato OK", "DEBUG", "PLUGIN")
+                enhanced_log("2. Server imported OK", "DEBUG", "PLUGIN")
 
-                enhanced_log("3. Avvio server HTTP...", "INFO", "PLUGIN")
+                enhanced_log("3. Starting HTTP server...", "INFO", "PLUGIN")
                 result = server.start_simple_server()
-                enhanced_log(f"4. Server result: {result}", "DEBUG", "PLUGIN")
+                enhanced_log("4. Server result: %s" % result, "DEBUG", "PLUGIN")
 
-                enhanced_log("5. Importo ServiceMonitor...", "DEBUG", "PLUGIN")
+                enhanced_log("5. Importing ServiceMonitor...", "DEBUG", "PLUGIN")
                 from .ServiceMonitor import StreamProxyServiceMonitor
-                enhanced_log(
-                    "6. ServiceMonitor importato OK",
-                    "DEBUG",
-                    "PLUGIN")
+                enhanced_log("6. ServiceMonitor imported OK", "DEBUG", "PLUGIN")
 
                 service_monitor = StreamProxyServiceMonitor(session)
-                enhanced_log(
-                    "7. ✅ ServiceMonitor istanziato",
-                    "INFO",
-                    "PLUGIN")
-                enhanced_log("8. ✅ TUTTO INIZIALIZZATO", "INFO", "PLUGIN")
+                enhanced_log("7. [OK] ServiceMonitor instantiated", "INFO", "PLUGIN")
+                enhanced_log("8. [OK] INITIALIZATION COMPLETE", "INFO", "PLUGIN")
 
             except ImportError as e:
-                enhanced_log(f"❌ ERRORE IMPORT: {e}", "ERROR", "PLUGIN")
+                enhanced_log("[ERROR] IMPORT ERROR: %s" % e, "ERROR", "PLUGIN")
             except Exception as e:
-                enhanced_log(f"❌ ERRORE GENERICO: {e}", "ERROR", "PLUGIN")
+                enhanced_log("[ERROR] GENERIC ERROR: %s" % e, "ERROR", "PLUGIN")
 
 
 class StreamProxyMain(Screen):
@@ -143,8 +137,8 @@ class StreamProxyMain(Screen):
         self.session = session
 
         self["status"] = Label(
-            "StreamProxy - Plugin attivo\n\nPremi VERDE per Setup\nPremi ROSSO per chiudere")
-        self["key_red"] = Label("Chiudi")
+            "StreamProxy - Plugin active\n\nPress GREEN for Setup\nPress RED to close")
+        self["key_red"] = Label("Close")
         self["key_green"] = Label("Setup")
 
         self["actions"] = ActionMap(["SetupActions", "OkCancelActions", "ColorActions"],
@@ -156,7 +150,7 @@ class StreamProxyMain(Screen):
         }, -2)
 
     def openSetup(self):
-        print("[StreamProxy] Apertura setup...")
+        print("[StreamProxy] Opening setup...")
         self.session.open(StreamProxySetup)
 
 
@@ -174,7 +168,7 @@ class StreamProxySetup(Screen):
         Screen.__init__(self, session)
         self.session = session
 
-        # Carica configurazione attuale
+        # Load current configuration
         self.config = load_config()
         self.proxy_enabled = (self.config.get("plugin_attivo", "ON") == "ON")
         self.debug_mode = (self.config.get("log_abilitato", "ON") == "ON")
@@ -182,8 +176,8 @@ class StreamProxySetup(Screen):
         self["menu"] = Label()
         self.updateMenu()
 
-        self["key_red"] = Label("Chiudi")
-        self["key_green"] = Label("Salva")
+        self["key_red"] = Label("Close")
+        self["key_green"] = Label("Save")
 
         self["actions"] = ActionMap(["SetupActions", "ColorActions"],
                                     {
@@ -194,47 +188,46 @@ class StreamProxySetup(Screen):
         }, -2)
 
     def saveAndClose(self):
-        """Salva le modifiche e chiude"""
+        """Save changes and close"""
         global DEBUG_ENABLED, PLUGIN_ENABLED
 
-        # Aggiorna la configurazione
+        # Update configuration
         self.config["plugin_attivo"] = "ON" if self.proxy_enabled else "OFF"
         self.config["log_abilitato"] = "ON" if self.debug_mode else "OFF"
 
-        # Salva nel file
+        # Save to file
         if save_config(self.config):
-            # Aggiorna le variabili globali
+            # Update global variables
             PLUGIN_ENABLED = self.proxy_enabled
             DEBUG_ENABLED = self.debug_mode
 
             from Screens.MessageBox import MessageBox
             self.session.open(
                 MessageBox,
-                "Configurazione salvata!",
+                "Configuration saved!",
                 MessageBox.TYPE_INFO,
                 timeout=2)
 
         self.close()
 
     def updateMenu(self):
-        menu_text = "CONFIGURAZIONE STREAMPROXY\n\n"
-        menu_text += f"1. Proxy abilitato: {
-            'ON' if self.proxy_enabled else 'OFF'}\n"
-        menu_text += f"2. Debug mode: {'ON' if self.debug_mode else 'OFF'}\n\n"
-        menu_text += "Premi OK per modificare\nPremi VERDE per salvare"
+        menu_text = "STREAMPROXY CONFIGURATION\n\n"
+        menu_text += "1. Proxy enabled: %s\n" % ('ON' if self.proxy_enabled else 'OFF')
+        menu_text += "2. Debug mode: %s\n\n" % ('ON' if self.debug_mode else 'OFF')
+        menu_text += "Press OK to modify\nPress GREEN to save"
 
         self["menu"].setText(menu_text)
 
     def toggleSetting(self):
         from Screens.ChoiceBox import ChoiceBox
         choices = [
-            (f"Proxy abilitato: {
-                'ON' if self.proxy_enabled else 'OFF'}", "proxy"), (f"Debug mode: {
-                    'ON' if self.debug_mode else 'OFF'}", "debug")]
+            ("Proxy enabled: %s" % ('ON' if self.proxy_enabled else 'OFF'), "proxy"),
+            ("Debug mode: %s" % ('ON' if self.debug_mode else 'OFF'), "debug")
+        ]
         self.session.openWithCallback(
             self.choiceCallback,
             ChoiceBox,
-            title="Seleziona impostazione da modificare:",
+            title="Select setting to modify:",
             list=choices)
 
     def choiceCallback(self, choice):
@@ -244,7 +237,7 @@ class StreamProxySetup(Screen):
             elif choice[1] == "debug":
                 self.debug_mode = not self.debug_mode
 
-            # Aggiorna immediatamente il menu
+            # Update menu immediately
             self.updateMenu()
 
 
@@ -264,7 +257,7 @@ def Plugins(**kwargs):
         ),
         PluginDescriptor(
             name="StreamProxy",
-            description="Plugin StreamProxy per Enigma2",
+            description="StreamProxy plugin for Enigma2",
             where=PluginDescriptor.WHERE_PLUGINMENU,
             icon="stream_proxy.png",
             fnc=main

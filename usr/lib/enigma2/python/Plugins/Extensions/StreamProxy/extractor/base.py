@@ -1,6 +1,8 @@
-"""Base extractor sincrono per StreamProxy/Enigma2.
+# -*- coding: utf-8 -*-
+"""Base synchronous extractor for StreamProxy/Enigma2.
 
-Derivato dal modello EasyProxy, ma senza dipendenze async non adatte ai decoder.
+Derived from the EasyProxy model, but without async dependencies
+unsuitable for set-top boxes.
 """
 
 import importlib
@@ -32,7 +34,7 @@ except (ImportError, ValueError):
         from StreamProxyLog import enhanced_log
     except ImportError:
         def enhanced_log(msg, level="INFO", tag="Extractor"):
-            print("[{}] [{}] {}".format(level, tag, msg))
+            print("[%s] [%s] %s" % (level, tag, msg))
 
 
 class ExtractorError(Exception):
@@ -40,7 +42,7 @@ class ExtractorError(Exception):
 
 
 class BaseExtractor:
-    """Base comune con sessione persistente, proxy opzionale e retry leggero."""
+    """Common base with persistent session, optional proxy and light retry."""
 
     def __init__(
             self,
@@ -107,7 +109,7 @@ class BaseExtractor:
             timeout=15,
             **kwargs):
         if not self.session:
-            raise ExtractorError("Modulo requests non disponibile")
+            raise ExtractorError("Requests module not available")
 
         final_headers = self._merge_headers(headers)
         kwargs.setdefault("allow_redirects", True)
@@ -132,27 +134,23 @@ class BaseExtractor:
                     response.raise_for_status()
                     return response
                 enhanced_log(
-                    "[{}] HTTP {}, retry {}".format(
+                    "[%s] HTTP %s, retry %d" % (
                         self.extractor_name,
                         response.status_code,
                         attempt + 1),
                     "DEBUG",
                     "Extractor")
-                last_error = ExtractorError(
-                    "HTTP {}".format(response.status_code))
+                last_error = ExtractorError("HTTP %s" % response.status_code)
             except Exception as exc:
                 last_error = exc
                 enhanced_log(
-                    "[{}] richiesta fallita: {}".format(
-                        self.extractor_name,
-                        exc),
+                    "[%s] request failed: %s" % (
+                        self.extractor_name, exc),
                     "DEBUG",
                     "Extractor")
             time.sleep(0.25 + random.random() * 0.25)
 
-        raise ExtractorError(
-            "Request failed for {}: {}".format(
-                url, last_error))
+        raise ExtractorError("Request failed for %s: %s" % (url, last_error))
 
     def close(self):
         if self.session:

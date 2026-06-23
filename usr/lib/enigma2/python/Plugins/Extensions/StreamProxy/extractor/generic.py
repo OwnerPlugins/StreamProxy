@@ -1,4 +1,5 @@
-"""Generic HLS extractor sincrono per StreamProxy/Enigma2."""
+# -*- coding: utf-8 -*-
+"""Generic synchronous HLS extractor for StreamProxy/Enigma2."""
 
 from urllib.parse import urlparse
 
@@ -19,7 +20,7 @@ class GenericHLSExtractor(BaseExtractor):
 
     def extract(self, url, **kwargs):
         parsed = urlparse(url)
-        origin = "{}://{}".format(parsed.scheme, parsed.netloc)
+        origin = "%s://%s" % (parsed.scheme, parsed.netloc)
         headers = {
             "user-agent": self.base_headers.get("User-Agent"),
         }

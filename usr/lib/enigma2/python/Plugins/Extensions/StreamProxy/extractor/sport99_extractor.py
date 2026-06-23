@@ -1,4 +1,5 @@
-# sport99_extractor.py - Sports99/CDNLiveTV extractor per Enigma2 Python 3
+# -*- coding: utf-8 -*-
+# sport99_extractor.py - Sports99/CDNLiveTV extractor for Enigma2 Python 3
 import base64
 import importlib
 import re
@@ -44,7 +45,7 @@ class Sport99ExtractorError(Exception):
 
 
 class Sport99Extractor:
-    """Extractor sincrono per player Sports99 che risolve stream CDNLiveTV."""
+    """Synchronous extractor for Sports99 player that resolves CDNLiveTV streams."""
 
     def __init__(self, request_headers=None, proxies=None):
         self.request_headers = request_headers or {}
@@ -113,14 +114,16 @@ class Sport99Extractor:
 
     def _make_request(self, url, headers=None, timeout=15, retries=2):
         if not self.session:
-            raise Sport99ExtractorError("Modulo requests non disponibile")
+            raise Sport99ExtractorError("Requests module not available")
 
         final_headers = self._merge_headers(headers)
         last_error = None
         for attempt in range(max(1, retries)):
             try:
-                enhanced_log("GET %s/%s %s" %
-                             (attempt + 1, retries, url[:120]), "DEBUG", "SPORT99")
+                enhanced_log(
+                    "GET %d/%d %s" % (attempt + 1, retries, url[:120]),
+                    "DEBUG",
+                    "SPORT99")
                 response = self.session.get(
                     url,
                     headers=final_headers,
@@ -136,13 +139,13 @@ class Sport99Extractor:
             except Exception as exc:
                 last_error = exc
                 enhanced_log(
-                    "Richiesta fallita: %s" %
-                    exc, "WARNING", "SPORT99")
+                    "Request failed: %s" % exc,
+                    "WARNING",
+                    "SPORT99")
             if attempt < retries - 1:
                 time.sleep(0.35)
         raise Sport99ExtractorError(
-            "Richiesta fallita per %s: %s" %
-            (url, last_error))
+            "Request failed for %s: %s" % (url, last_error))
 
     def _build_player_headers(self, url):
         parsed = urlparse(url)
@@ -203,7 +206,7 @@ class Sport99Extractor:
             except Exception:
                 return result
         except Exception as exc:
-            enhanced_log("Unpack fallito: %s" % exc, "ERROR", "SPORT99")
+            enhanced_log("Unpack failed: %s" % exc, "ERROR", "SPORT99")
             return ""
 
     @staticmethod
@@ -269,7 +272,7 @@ class Sport99Extractor:
 
     def extract(self, url, request_headers=None, **kwargs):
         self.update_request_headers(request_headers)
-        enhanced_log("Inizio estrazione: %s" % url[:120], "INFO", "SPORT99")
+        enhanced_log("Starting extraction: %s" % url[:120], "INFO", "SPORT99")
 
         response = self._make_request(
             url, headers=self._build_player_headers(url))
@@ -284,7 +287,7 @@ class Sport99Extractor:
                 html or "",
             )
             if not packed_match:
-                raise Sport99ExtractorError("Packed script non trovato")
+                raise Sport99ExtractorError("Packed script not found")
 
             h_value, u_value, n_value, t_value, e_value, _unused = packed_match.groups()
             unpacked_js = self._unpack(
@@ -296,7 +299,7 @@ class Sport99Extractor:
             stream_url = self._extract_url_from_js(unpacked_js)
 
         if not stream_url:
-            raise Sport99ExtractorError("Nessun URL m3u8 trovato")
+            raise Sport99ExtractorError("No m3u8 URL found")
 
         stream_url = urljoin(response.url, stream_url.replace("\\/", "/"))
         stream_headers = self._build_stream_headers()
@@ -304,7 +307,7 @@ class Sport99Extractor:
         if cookie_header:
             stream_headers["Cookie"] = cookie_header
 
-        enhanced_log("M3U8 estratto: %s" % stream_url, "INFO", "SPORT99")
+        enhanced_log("M3U8 extracted: %s" % stream_url, "INFO", "SPORT99")
 
         result = {
             "resolved_url": stream_url,
@@ -320,7 +323,7 @@ class Sport99Extractor:
             manifest_text = manifest_response.text
             if manifest_text and manifest_text.lstrip().startswith("#EXTM3U"):
                 enhanced_log(
-                    "Manifest M3U8 scaricato con sessione Sport99",
+                    "M3U8 manifest downloaded with Sport99 session",
                     "INFO",
                     "SPORT99")
                 result["resolved_url"] = manifest_response.url
@@ -328,13 +331,14 @@ class Sport99Extractor:
                 result["m3u8_content"] = manifest_text
             else:
                 enhanced_log(
-                    "Manifest Sport99 non valido, lascio fetch ad AppCore",
+                    "Sport99 manifest invalid, letting AppCore fetch",
                     "WARNING",
                     "SPORT99")
         except Exception as exc:
             enhanced_log(
-                "Prefetch manifest Sport99 fallito: %s" %
-                exc, "WARNING", "SPORT99")
+                "Sport99 manifest prefetch failed: %s" % exc,
+                "WARNING",
+                "SPORT99")
 
         return result
 
@@ -354,7 +358,7 @@ def extract_sport99(url, request_headers=None):
     try:
         return sport99_extractor.extract(url, request_headers=request_headers)
     except Exception as exc:
-        enhanced_log("Errore estrazione Sport99: %s" % exc, "ERROR", "SPORT99")
+        enhanced_log("Sport99 extraction error: %s" % exc, "ERROR", "SPORT99")
         return None
 
 
@@ -371,4 +375,4 @@ def is_sport99_link(url):
 
 
 if __name__ == "__main__":
-    print("Sport99 extractor pronto")
+    print("Sport99 extractor ready")

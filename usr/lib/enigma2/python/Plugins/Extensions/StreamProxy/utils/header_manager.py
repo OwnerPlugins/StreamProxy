@@ -1,30 +1,31 @@
-# utils/header_manager.py - Gestore headers per propagazione corretta tra
-# M3U8 e segmenti TS
+# -*- coding: utf-8 -*-
+# utils/header_manager.py - Header manager for correct propagation between
+# M3U8 and TS segments
 
 import logging
-from typing import Dict, List, Optional
+from typing import Dict
 
 logger = logging.getLogger(__name__)
 
 
 class HeaderManager:
-    """Gestisce la propagazione corretta degli headers tra M3U8 e segmenti TS"""
+    """Manages correct header propagation between M3U8 and TS segments."""
 
     def __init__(self):
         self.stream_headers = {}  # stream_id -> headers
 
     def save_stream_headers(self, stream_id: str, headers: Dict[str, str]):
-        """Salva gli headers per uno stream specifico"""
+        """Save headers for a specific stream."""
         if not stream_id or not headers:
             return
 
-        # Headers essenziali per l'autenticazione
+        # Essential headers for authentication
         essential_headers = [
             'Authorization', 'X-Channel-Key', 'X-Client-Token',
             'Heartbeat-Url', 'User-Agent', 'Referer', 'Origin', 'Cookie'
         ]
 
-        # Filtra solo gli headers essenziali
+        # Filter only essential headers
         filtered_headers = {}
         for key, value in headers.items():
             if key in essential_headers:
@@ -33,15 +34,14 @@ class HeaderManager:
         if filtered_headers:
             self.stream_headers[stream_id] = filtered_headers
             logger.info(
-                f"💾 [HEADER_MANAGER] Salvati {
-                    len(filtered_headers)} headers per stream {stream_id}")
+                "[HEADER_MANAGER] Saved %d headers for stream %s" % (
+                    len(filtered_headers), stream_id))
             logger.debug(
-                f"📝 [HEADER_MANAGER] Headers: {
-                    list(
-                        filtered_headers.keys())}")
+                "[HEADER_MANAGER] Headers: %s" % list(
+                    filtered_headers.keys()))
 
     def get_stream_headers(self, stream_id: str) -> Dict[str, str]:
-        """Ottiene gli headers salvati per uno stream"""
+        """Get saved headers for a stream."""
         return self.stream_headers.get(stream_id, {})
 
     def combine_headers(self,
@@ -49,38 +49,39 @@ class HeaderManager:
                         query_headers: Dict[str,
                                             str]) -> Dict[str,
                                                           str]:
-        """Combina headers dal query string con quelli salvati per lo stream"""
+        """Combine headers from query string with saved stream headers."""
         saved_headers = self.get_stream_headers(stream_id)
 
-        # Gli headers dal query string hanno priorità
+        # Headers from query string take priority
         combined = saved_headers.copy()
         combined.update(query_headers)
 
-        # Verifica headers critici mancanti
+        # Check for missing critical headers
         critical_headers = ['Authorization', 'X-Channel-Key', 'X-Client-Token']
         missing_critical = [h for h in critical_headers if h not in combined]
 
         if missing_critical:
             logger.warning(
-                f"⚠️ [HEADER_MANAGER] Headers critici mancanti per {stream_id}: {missing_critical}")
+                "[HEADER_MANAGER] Missing critical headers for %s: %s" % (
+                    stream_id, missing_critical))
 
         return combined
 
     def clear_stream(self, stream_id: str):
-        """Rimuove gli headers per uno stream specifico"""
+        """Remove headers for a specific stream."""
         if stream_id in self.stream_headers:
             del self.stream_headers[stream_id]
             logger.debug(
-                f"🗑️ [HEADER_MANAGER] Rimossi headers per stream {stream_id}")
+                "[HEADER_MANAGER] Removed headers for stream %s" % stream_id)
 
     def clear_all(self):
-        """Rimuove tutti gli headers salvati"""
+        """Remove all saved headers."""
         count = len(self.stream_headers)
         self.stream_headers.clear()
         if count > 0:
             logger.info(
-                f"🧹 [HEADER_MANAGER] Rimossi headers per {count} stream")
+                "[HEADER_MANAGER] Removed headers for %d streams" % count)
 
 
-# Istanza globale
+# Global instance
 header_manager = HeaderManager()

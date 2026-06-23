@@ -1,9 +1,8 @@
-# livetv_extractor.py - LiveTV URL extractor per domini powerset
+# -*- coding: utf-8 -*-
+# livetv_extractor.py - LiveTV URL extractor for powerset domains
 import re
-import json
 import requests
-import time
-from urllib.parse import urlparse, urljoin, unquote, quote
+from urllib.parse import urlparse, urljoin, unquote
 try:
     from ..StreamProxyLog import enhanced_log
 except ImportError:
@@ -15,12 +14,12 @@ except ImportError:
 
 
 class LiveTVExtractorError(Exception):
-    """Eccezione personalizzata per errori dell'extractor LiveTV"""
+    """Custom exception for LiveTV extractor errors."""
     pass
 
 
 class LiveTVExtractor:
-    """LiveTV URL extractor per domini powerset"""
+    """LiveTV URL extractor for powerset domains."""
 
     def __init__(self, request_headers: dict = None):
         self.base_headers = {
@@ -35,11 +34,11 @@ class LiveTVExtractor:
 
         self.session = None
         enhanced_log(
-            "🚀 [LIVETV] LiveTVExtractor inizializzato",
+            "[LIVETV] LiveTVExtractor initialised",
             "INFO",
             "LIVETV")
 
-        # Pattern per l'estrazione degli stream
+        # Stream extraction patterns
         self.fallback_pattern = re.compile(
             r"source: ['\"]([^'\"]+)['\"].*?mimeType: ['\"]([^'\"]+)['\"]",
             re.IGNORECASE | re.DOTALL
@@ -51,34 +50,36 @@ class LiveTVExtractor:
         )
 
         enhanced_log(
-            "🔍 [LIVETV] Pattern di ricerca configurati",
+            "[LIVETV] Search patterns configured",
             "DEBUG",
             "LIVETV")
 
     def _create_session(self):
-        """Crea una nuova sessione HTTP"""
+        """Create a new HTTP session."""
         if self.session:
             try:
                 self.session.close()
             except Exception as e:
                 enhanced_log(
-                    f"Errore chiusura sessione precedente: {e}",
+                    "Error closing previous session: %s" % e,
                     "DEBUG",
                     "LIVETV")
 
         self.session = requests.Session()
         self.session.headers.update(self.base_headers)
-        enhanced_log("🔧 [LIVETV] Nuova sessione creata", "DEBUG", "LIVETV")
+        enhanced_log("[LIVETV] New session created", "DEBUG", "LIVETV")
         return True
 
     def _make_request(self, url, method="GET", **kwargs):
-        """Wrapper per requests ottimizzato per Enigma2"""
+        """Wrapper for requests optimised for Enigma2."""
         enhanced_log(
-            f"🌐 [LIVETV] Richiesta {method}: {url[:100]}...", "INFO", "LIVETV")
+            "[LIVETV] Request %s: %s..." % (method, url[:100]),
+            "INFO",
+            "LIVETV")
 
         if not self.session and not self._create_session():
             enhanced_log(
-                "❌ [LIVETV] Impossibile creare sessione",
+                "[LIVETV] Unable to create session",
                 "ERROR",
                 "LIVETV")
             raise LiveTVExtractorError("Cannot create session")
@@ -100,25 +101,21 @@ class LiveTVExtractor:
                 )
 
             enhanced_log(
-                f"✅ [LIVETV] Risposta {
-                    response.status_code}: {
-                    len(
-                        response.text) if hasattr(
-                        response,
-                        'text') else len(
-                        response.content)} bytes",
+                "[LIVETV] Response %s: %d bytes" % (
+                    response.status_code,
+                    len(response.text) if hasattr(response, 'text') else len(response.content)),
                 "INFO",
                 "LIVETV")
             return response
 
         except Exception as e:
             enhanced_log(
-                f"❌ [LIVETV] Errore richiesta: {e}",
+                "[LIVETV] Request error: %s" % e,
                 "ERROR",
                 "LIVETV")
             raise
 
-    async def extract(self, url: str, stream_title: str = None, **kwargs):
+    def extract(self, url: str, stream_title: str = None, **kwargs):
         """Extract LiveTV URL and required headers.
 
         Args:
@@ -130,19 +127,21 @@ class LiveTVExtractor:
         """
         try:
             enhanced_log(
-                f"🚀 [LIVETV] Inizio estrazione: {url[:100]}...", "INFO", "LIVETV")
+                "[LIVETV] Starting extraction: %s..." % url[:100],
+                "INFO",
+                "LIVETV")
 
             # Get the channel page
             response = self._make_request(url)
             self.base_headers["referer"] = urljoin(url, "/")
 
             # Extract player API details
-            player_api_base, method = await self._extract_player_api_base(response.text)
+            player_api_base, method = self._extract_player_api_base(response.text)
             if not player_api_base:
                 raise LiveTVExtractorError("Failed to extract player API URL")
 
             # Get player options
-            options_data = await self._get_player_options(response.text)
+            options_data = self._get_player_options(response.text)
             if not options_data:
                 raise LiveTVExtractorError("No player options found")
 
@@ -153,7 +152,7 @@ class LiveTVExtractor:
                     continue
 
                 # Get stream URL based on player option
-                stream_data = await self._process_player_option(
+                stream_data = self._process_player_option(
                     player_api_base, method, option.get("post"), option.get("nume"), option.get("type")
                 )
 
@@ -162,7 +161,7 @@ class LiveTVExtractor:
                     if not stream_url:
                         continue
 
-                    response = {
+                    result = {
                         "resolved_url": stream_url,
                         "headers": self.base_headers,
                         "mediaflow_endpoint": "hls_manifest_proxy",
@@ -172,7 +171,7 @@ class LiveTVExtractor:
                     if stream_data.get("type") == "mpd":
                         if stream_data.get(
                                 "drm_key_id") and stream_data.get("drm_key"):
-                            response.update(
+                            result.update(
                                 {
                                     "query_params": {
                                         "key_id": stream_data["drm_key_id"],
@@ -183,21 +182,21 @@ class LiveTVExtractor:
                             )
 
                     enhanced_log(
-                        "✅ [LIVETV] Estrazione completata con successo",
+                        "[LIVETV] Extraction completed successfully",
                         "INFO",
                         "LIVETV")
-                    return response
+                    return result
 
             raise LiveTVExtractorError("No valid stream found")
 
         except Exception as e:
             enhanced_log(
-                f"❌ [LIVETV] Errore estrazione: {e}",
+                "[LIVETV] Extraction error: %s" % e,
                 "ERROR",
                 "LIVETV")
-            raise LiveTVExtractorError(f"Extraction failed: {str(e)}")
+            raise LiveTVExtractorError("Extraction failed: %s" % str(e))
 
-    async def _extract_player_api_base(self, html_content: str):
+    def _extract_player_api_base(self, html_content: str):
         """Extract player API base URL and method."""
         admin_ajax_pattern = r'"player_api"\s*:\s*"([^"]+)".*?"play_method"\s*:\s*"([^"]+)"'
         match = re.search(admin_ajax_pattern, html_content)
@@ -214,7 +213,7 @@ class LiveTVExtractor:
         url = urljoin(url, "/wp-admin/admin-ajax.php")
         return url, method
 
-    async def _get_player_options(self, html_content: str):
+    def _get_player_options(self, html_content: str):
         """Extract player options from HTML content."""
         pattern = r'<li[^>]*class=["\']dooplay_player_option["\'][^>]*data-type=["\']([^"\']*)["\'][^>]*data-post=["\']([^"\']*)["\'][^>]*data-nume=["\']([^"\']*)["\'][^>]*>.*?<span class=["\']title["\']>([^<]*)</span>'
         matches = re.finditer(pattern, html_content, re.DOTALL)
@@ -222,7 +221,7 @@ class LiveTVExtractor:
         return [{"type": match.group(1), "post": match.group(2), "nume": match.group(
             3), "title": match.group(4).strip()} for match in matches]
 
-    async def _process_player_option(
+    def _process_player_option(
             self,
             api_base: str,
             method: str,
@@ -231,7 +230,7 @@ class LiveTVExtractor:
             type_: str):
         """Process player option to get stream URL."""
         if method == "wp_json":
-            api_url = f"{api_base}{post}/{type_}/{nume}"
+            api_url = "%s%s/%s/%s" % (api_base, post, type_, nume)
             response = self._make_request(api_url)
         else:
             form_data = {
@@ -255,19 +254,19 @@ class LiveTVExtractor:
 
             # Get stream URL from iframe
             iframe_response = self._make_request(iframe_url)
-            stream_data = await self._extract_stream_url(iframe_response, iframe_url)
+            stream_data = self._extract_stream_url(iframe_response, iframe_url)
 
             return stream_data
 
         except Exception as e:
             enhanced_log(
-                f"❌ [LIVETV] Errore processamento opzione player: {e}",
+                "[LIVETV] Error processing player option: %s" % e,
                 "ERROR",
                 "LIVETV")
             raise LiveTVExtractorError(
-                f"Failed to process player option: {str(e)}")
+                "Failed to process player option: %s" % str(e))
 
-    async def _extract_stream_url(self, iframe_response, iframe_url: str):
+    def _extract_stream_url(self, iframe_response, iframe_url: str):
         """Extract final stream URL from iframe content."""
         try:
             # Parse URL components
@@ -322,8 +321,7 @@ class LiveTVExtractor:
 
                 if channel_id:
                     # Try channel ID specific pattern
-                    pattern = rf'{
-                        re.escape(channel_id)}["\']:\s*{{\s*["\']?url["\']?\s*:\s*["\']([^"\']+)["\']'
+                    pattern = r'%s["\']:\s*{\s*["\']?url["\']?\s*:\s*["\']([^"\']+)["\']' % re.escape(channel_id)
                     match = re.search(pattern, html_content)
                     if match:
                         stream_url = match.group(1)
@@ -346,7 +344,7 @@ class LiveTVExtractor:
                     # Check for MPD stream and extract DRM keys
                     if stream_url.endswith(".mpd"):
                         stream_data["type"] = "mpd"
-                        drm_data = await self._extract_drm_keys(html_content, channel_id)
+                        drm_data = self._extract_drm_keys(html_content, channel_id)
                         if drm_data:
                             stream_data.update(drm_data)
 
@@ -366,17 +364,17 @@ class LiveTVExtractor:
 
         except Exception as e:
             enhanced_log(
-                f"❌ [LIVETV] Errore estrazione stream URL: {e}",
+                "[LIVETV] Error extracting stream URL: %s" % e,
                 "ERROR",
                 "LIVETV")
             raise LiveTVExtractorError(
-                f"Failed to extract stream URL: {str(e)}")
+                "Failed to extract stream URL: %s" % str(e))
 
-    async def _extract_drm_keys(self, html_content: str, channel_id: str):
+    def _extract_drm_keys(self, html_content: str, channel_id: str):
         """Extract DRM keys for MPD streams."""
         try:
             # Pattern for channel entry
-            channel_pattern = rf'"{re.escape(channel_id)}":\s*{{[^}}]+}}'
+            channel_pattern = r'"%s":\s*{[^}]+}' % re.escape(channel_id)
             channel_match = re.search(channel_pattern, html_content)
 
             if channel_match:
@@ -405,31 +403,31 @@ class LiveTVExtractor:
             return {}
 
     def clear_cache(self, channel_id=None):
-        """Metodo per compatibilità - pulisce la sessione"""
-        enhanced_log("🧹 [LIVETV] Pulizia cache/sessione", "INFO", "LIVETV")
+        """Compatibility method - clears the session."""
+        enhanced_log("[LIVETV] Clearing cache/session", "INFO", "LIVETV")
         if self.session:
             try:
                 self.session.close()
             except Exception as e:
                 enhanced_log(
-                    f"Errore chiusura sessione in clear_cache: {e}",
+                    "Error closing session in clear_cache: %s" % e,
                     "DEBUG",
                     "LIVETV")
             self.session = None
 
     def __del__(self):
-        """Cleanup automatico"""
+        """Automatic cleanup."""
         if self.session:
             try:
                 self.session.close()
             except Exception:
                 pass
 
-# Funzioni di utilità per compatibilità
+# Utility functions for compatibility
 
 
 def is_powerset_domain(url):
-    """Rileva se l'URL è un dominio powerset"""
+    """Detect if the URL is a powerset domain."""
     if not url:
         return False
 
@@ -463,30 +461,32 @@ def is_powerset_domain(url):
 
 
 def process_powerset_url(url, headers=None):
-    """Processa URL powerset"""
+    """Process powerset URL."""
     enhanced_log(
-        f"🎯 [LIVETV] Processamento URL powerset: {url[:50]}...", "INFO", "LIVETV")
+        "[LIVETV] Processing powerset URL: %s..." % url[:50],
+        "INFO",
+        "LIVETV")
 
     try:
         extractor = LiveTVExtractor(headers)
 
-        # Per ora restituiamo un risultato semplice
-        # In futuro qui andrà la logica specifica per powerset
+        # For now return a simple result
+        # In the future, specific powerset logic will go here
         return {
-            "resolved_url": url,  # Passthrough per ora
+            "resolved_url": url,  # Passthrough for now
             "headers": headers or {},
             "mediaflow_endpoint": "hls_manifest_proxy"
         }
 
     except Exception as e:
         enhanced_log(
-            f"❌ [LIVETV] Errore processamento powerset: {e}",
+            "[LIVETV] Powerset processing error: %s" % e,
             "ERROR",
             "LIVETV")
         return None
 
 
-# Istanza globale per compatibilità
+# Global instance for compatibility
 livetv_extractor = LiveTVExtractor()
 
-enhanced_log("✅ [LIVETV] LiveTV Extractor caricato e pronto", "INFO", "LIVETV")
+enhanced_log("[LIVETV] LiveTV Extractor loaded and ready", "INFO", "LIVETV")

@@ -1,99 +1,97 @@
 #!/usr/bin/env python3
 """
-Script per installare le dipendenze ottimali per StreamProxy su decoder Enigma2
+Script to install optimal dependencies for StreamProxy on Enigma2 decoder
 """
 
 import subprocess
 import sys
-import os
 
 
 def install_package(package):
-    """Installa un pacchetto Python"""
+    """Install a Python package"""
     try:
-        subprocess.check_call(
-            [sys.executable, "-m", "pip", "install", package])
-        print(f"✅ {package} installato con successo")
+        subprocess.check_call([sys.executable, "-m", "pip", "install", package])
+        print("[OK] %s installed successfully" % package)
         return True
     except subprocess.CalledProcessError:
-        print(f"❌ Errore installazione {package}")
+        print("[FAIL] Error installing %s" % package)
         return False
 
 
 def check_package(package):
-    """Controlla se un pacchetto è già installato"""
+    """Check if a package is already installed"""
     try:
         __import__(package)
-        print(f"✅ {package} già installato")
+        print("[OK] %s already installed" % package)
         return True
     except ImportError:
-        print(f"⚠️ {package} non trovato")
+        print("[WARN] %s not found" % package)
         return False
 
 
 def main():
-    print("🚀 Installazione dipendenze StreamProxy per decoder Enigma2")
+    print("[INFO] StreamProxy dependency installation for Enigma2 decoder")
     print("=" * 60)
 
-    # Lista delle dipendenze opzionali per ottimizzazione
+    # List of optional dependencies for optimisation
     optional_packages = [
-        ("psutil", "Monitoraggio memoria RAM per cache intelligente"),
-        ("requests", "Libreria HTTP (dovrebbe essere già presente)"),
+        ("psutil", "RAM monitoring for intelligent cache"),
+        ("requests", "HTTP library (should already be present)"),
     ]
 
-    print("\n📦 Controllo dipendenze opzionali...")
+    print("\n[PACKAGE] Checking optional dependencies...")
 
     for package, description in optional_packages:
-        print(f"\n🔍 Controllo {package} - {description}")
+        print("\n[CHECK] %s - %s" % (package, description))
 
         if not check_package(package):
-            print(f"📥 Installazione {package}...")
+            print("[DOWNLOAD] Installing %s..." % package)
             if install_package(package):
-                print(f"✅ {package} installato e pronto")
+                print("[OK] %s installed and ready" % package)
             else:
-                print(f"⚠️ {package} non installato - funzionalità ridotte")
+                print("[WARN] %s not installed - reduced functionality" % package)
                 if package == "psutil":
-                    print("   → Cache userà configurazione minima per sicurezza")
+                    print("   -> Cache will use minimal safe configuration")
         else:
-            print(f"✅ {package} già disponibile")
+            print("[OK] %s already available" % package)
 
     print("\n" + "=" * 60)
-    print("🎯 Configurazione completata!")
-    print("\n📊 Configurazione cache ottimizzata:")
+    print("[DONE] Configuration completed!")
+    print("\n[CACHE] Optimised cache configuration:")
 
-    # Test configurazione cache
+    # Test cache configuration
     try:
         import psutil
         available_ram_mb = psutil.virtual_memory().available / (1024 * 1024)
-        print(f"   🧠 RAM disponibile: {available_ram_mb:.1f} MB")
+        print("   [RAM] Available RAM: %.1f MB" % available_ram_mb)
 
         if available_ram_mb < 128:
-            print("   📦 Configurazione: MINIMA (decoder con poca RAM)")
-            print("   🎞️ Cache TS: 5 segmenti, max 10MB")
-            print("   📋 Cache M3U8: 3 playlist")
+            print("   [CACHE] Configuration: MINIMAL (low RAM decoder)")
+            print("   [CACHE] TS cache: 5 segments, max 10MB")
+            print("   [CACHE] M3U8 cache: 3 playlists")
         elif available_ram_mb < 256:
-            print("   📦 Configurazione: MEDIA")
-            print("   🎞️ Cache TS: 10 segmenti, max 20MB")
-            print("   📋 Cache M3U8: 5 playlist")
+            print("   [CACHE] Configuration: MEDIUM")
+            print("   [CACHE] TS cache: 10 segments, max 20MB")
+            print("   [CACHE] M3U8 cache: 5 playlists")
         else:
-            print("   📦 Configurazione: OTTIMALE")
-            print("   🎞️ Cache TS: 20 segmenti, max 40MB")
-            print("   📋 Cache M3U8: 10 playlist")
+            print("   [CACHE] Configuration: OPTIMAL")
+            print("   [CACHE] TS cache: 20 segments, max 40MB")
+            print("   [CACHE] M3U8 cache: 10 playlists")
 
     except ImportError:
-        print("   📦 Configurazione: SICURA (psutil non disponibile)")
-        print("   🎞️ Cache TS: 3 segmenti, max 5MB")
-        print("   📋 Cache M3U8: 2 playlist")
+        print("   [CACHE] Configuration: SAFE (psutil not available)")
+        print("   [CACHE] TS cache: 3 segments, max 5MB")
+        print("   [CACHE] M3U8 cache: 2 playlists")
 
-    print("\n🔧 Ottimizzazioni attive:")
-    print("   ✅ Cache intelligente con gestione memoria")
-    print("   ✅ Monitoraggio RAM automatico")
-    print("   ✅ Garbage collection forzato quando necessario")
-    print("   ✅ Dimensioni cache dinamiche")
-    print("   ✅ Timeout ridotti per decoder lenti")
-    print("   ✅ Chunking ottimizzato per memoria limitata")
+    print("\n[OPTIM] Active optimisations:")
+    print("   [OK] Intelligent cache with memory management")
+    print("   [OK] Automatic RAM monitoring")
+    print("   [OK] Forced garbage collection when needed")
+    print("   [OK] Dynamic cache sizes")
+    print("   [OK] Reduced timeouts for slow decoders")
+    print("   [OK] Optimised chunking for limited memory")
 
-    print("\n🚀 StreamProxy pronto per decoder Enigma2!")
+    print("\n[INFO] StreamProxy ready for Enigma2 decoder!")
 
 
 if __name__ == "__main__":

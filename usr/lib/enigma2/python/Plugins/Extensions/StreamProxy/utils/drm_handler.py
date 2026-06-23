@@ -1,8 +1,8 @@
-# utils/drm_handler.py - Gestore DRM semplificato per Enigma2
-# Basato su EasyProxy/utils/drm_decrypter.py ma semplificato
+# -*- coding: utf-8 -*-
+# utils/drm_handler.py - Simplified DRM handler for Enigma2
+# Based on EasyProxy/utils/drm_decrypter.py but simplified
 
-import struct
-from typing import Optional, Dict, Any
+from typing import Dict, Any
 
 try:
     from Crypto.Cipher import AES
@@ -12,20 +12,20 @@ except ImportError:
 
 
 class DRMHandler:
-    """Gestore DRM semplificato per Enigma2"""
+    """Simplified DRM handler for Enigma2."""
 
     def __init__(self):
         self.keys = {}
 
     def add_key(self, key_id: str, key: str):
-        """Aggiunge una chiave di decrittazione"""
+        """Add a decryption key."""
         try:
             self.keys[key_id] = bytes.fromhex(key)
         except ValueError:
             pass
 
     def decrypt_aes128(self, data: bytes, key: bytes, iv: bytes) -> bytes:
-        """Decrittazione AES-128 CTR"""
+        """AES-128 CTR decryption."""
         if not CRYPTO_AVAILABLE:
             return data
 
@@ -40,7 +40,7 @@ class DRMHandler:
             return data
 
     def process_clearkey(self, key_data: Dict[str, Any]) -> Dict[str, str]:
-        """Processa dati ClearKey"""
+        """Process ClearKey data."""
         keys = {}
 
         if 'keys' in key_data:
@@ -51,5 +51,5 @@ class DRMHandler:
         return keys
 
     def has_crypto(self) -> bool:
-        """Verifica se il supporto crypto è disponibile"""
+        """Check if crypto support is available."""
         return CRYPTO_AVAILABLE

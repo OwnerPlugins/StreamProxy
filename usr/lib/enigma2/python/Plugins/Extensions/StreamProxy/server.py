@@ -1,5 +1,5 @@
-﻿# server.py - VERSIONE COMPLETA
-from twisted.internet import reactor
+# -*- coding: utf-8 -*-
+
 from twisted.web import server, resource
 from twisted.internet import threads
 from .StreamProxyLog import enhanced_log as _enhanced_log
@@ -26,11 +26,11 @@ def enhanced_log(msg, level="INFO", tag="SERVER"):
             text = str(msg)
             if any(
                 marker in text for marker in (
-                    "Richiesta HTTP",
-                    "SEGMENTO",
-                    "Invio",
-                    "RISPOSTA INVIATA",
-                    "PROCESSAMENTO RICHIESTA")):
+                    "HTTP request",
+                    "SEGMENT",
+                    "Sending",
+                    "RESPONSE SENT",
+                    "PROCESSING REQUEST")):
                 return
     return _enhanced_log(msg, level, tag)
 
@@ -40,7 +40,6 @@ class ProxyResource(resource.Resource):
 
     def __init__(self):
         resource.Resource.__init__(self)
-        # Aggiungi child resources
         self.putChild(b'ts', ProxyTSResource())
         self.putChild(b'm3u', ProxyM3UResource())
         self.putChild(b'key', ProxyKeyResource())
@@ -51,11 +50,10 @@ class ProxyTSResource(resource.Resource):
 
     def render_GET(self, request):
         enhanced_log(
-            "ðŸŽžï¸ [ProxyTSResource] Richiesta TS da Enigma2",
+            "[ProxyTSResource] TS request from Enigma2",
             "INFO",
             "SERVER")
 
-        # Processo asincrono per non bloccare Twisted
         d = threads.deferToThread(self.handleTSRequest, request)
         d.addCallback(self.sendTSResponse, request)
         d.addErrback(self.sendError, request)
@@ -65,15 +63,13 @@ class ProxyTSResource(resource.Resource):
         try:
             from .AppCore import service_monitor_callback
 
-            # Estrai parametri
             args = {key.decode(): value[0].decode()
                     for key, value in request.args.items()}
 
-            # Chiama AppCore
             result = service_monitor_callback('/proxy/ts', **args)
             return result
         except Exception as e:
-            enhanced_log(f"âŒ Errore TS: {e}", "ERROR", "SERVER")
+            enhanced_log("[ERROR] TS error: %s" % e, "ERROR", "SERVER")
             raise
 
     def sendTSResponse(self, result, request):
@@ -92,10 +88,11 @@ class ProxyTSResource(resource.Resource):
             request.finish()
 
             enhanced_log(
-                f"âœ… [ProxyTSResource] TS servito: {
-                    len(content)} bytes", "INFO", "SERVER")
+                "[OK] [ProxyTSResource] TS served: %d bytes" % len(content),
+                "INFO",
+                "SERVER")
         except Exception as e:
-            enhanced_log(f"âŒ Errore invio TS: {e}", "ERROR", "SERVER")
+            enhanced_log("[ERROR] Error sending TS: %s" % e, "ERROR", "SERVER")
             self.sendError(e, request)
 
     def sendError(self, error, request):
@@ -175,13 +172,12 @@ class ProxyKeyResource(resource.Resource):
         request.finish()
 
 
-# server.py - ALTERNATIVA CON HTTP SERVER NATIVO
+# --- Native HTTP server fallback (for environments without Twisted) ---
 def start_simple_server(port=7860):
-    """Avvia server HTTP semplice per Enigma2"""
-    global _native_server, _server_thread, _server_port
+    """Start a simple HTTP server for Enigma2 (native fallback)."""
+    global _server_thread
     from .StreamProxyLog import enhanced_log
     import threading
-    import time
     try:
         from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
     except ImportError:
@@ -194,7 +190,7 @@ def start_simple_server(port=7860):
 
     if _server_thread is not None and _server_thread.is_alive():
         enhanced_log(
-            f"Server HTTP nativo gia attivo su porta {_server_port}",
+            "Native HTTP server already active on port %d" % _server_port,
             "INFO",
             "SERVER")
         return True
@@ -205,21 +201,18 @@ def start_simple_server(port=7860):
         def do_GET(self):
             from .StreamProxyLog import enhanced_log
             enhanced_log(
-                f"ðŸŒ Richiesta HTTP ricevuta: {
-                    self.path}", "INFO", "SERVER")
+                "HTTP request received: %s" % self.path,
+                "INFO",
+                "SERVER")
             enhanced_log(
-                f"ðŸŒ [HTTP_HEADERS] Headers: {
-                    dict(
-                        self.headers)}",
+                "[HTTP_HEADERS] Headers: %s" % dict(self.headers),
                 "DEBUG",
                 "SERVER")
 
             try:
                 parsed = urlparse(self.path)
                 enhanced_log(
-                    f"ðŸ“ Path: {
-                        parsed.path}, Query: {
-                        parsed.query}",
+                    "Path: %s, Query: %s" % (parsed.path, parsed.query),
                     "DEBUG",
                     "SERVER")
 
@@ -233,87 +226,86 @@ def start_simple_server(port=7860):
                     return
 
                 if '/proxy/ts' in parsed.path:
-                    # Rileva se Ã¨ fMP4 dai parametri
                     params = parse_qs(parsed.query)
                     is_fmp4 = params.get('fmp4', [''])[0] == '1'
                     segment_type = "fMP4" if is_fmp4 else "TS"
                     enhanced_log(
-                        f"ðŸŽ¯ [{segment_type}_REQUEST] Richiesta segmento {segment_type} ricevuta: {
-                            parsed.path}", "INFO", "SERVER")
+                        "[%s_REQUEST] %s segment request received: %s" % (segment_type, segment_type, parsed.path),
+                        "INFO",
+                        "SERVER")
                     enhanced_log(
-                        f"ðŸŽ¯ [{segment_type}_PARAMS] Parametri {segment_type}: {
-                            parsed.query}", "DEBUG", "SERVER")
+                        "[%s_PARAMS] %s parameters: %s" % (segment_type, segment_type, parsed.query),
+                        "DEBUG",
+                        "SERVER")
                 elif '/proxy/init.hls.fmp4' in parsed.path:
                     enhanced_log(
-                        f"ðŸŽ¬ [INIT_FMP4_REQUEST] Richiesta init fMP4 ricevuta: {
-                            parsed.path}", "INFO", "SERVER")
+                        "[INIT_FMP4_REQUEST] Init fMP4 request received: %s" % parsed.path,
+                        "INFO",
+                        "SERVER")
                     enhanced_log(
-                        f"ðŸŽ¬ [INIT_FMP4_PARAMS] Parametri init fMP4: {
-                            parsed.query}", "DEBUG", "SERVER")
+                        "[INIT_FMP4_PARAMS] Init fMP4 parameters: %s" % parsed.query,
+                        "DEBUG",
+                        "SERVER")
                 elif '/proxy/m3u' in parsed.path:
                     enhanced_log(
-                        f"ðŸ”„ [M3U_REQUEST] Richiesta M3U8 #{
-                            getattr(
-                                self,
-                                '_m3u_count',
-                                0)}",
+                        "[M3U_REQUEST] M3U8 request #%d" % getattr(self, '_m3u_count', 0),
                         "INFO",
                         "SERVER")
                     self._m3u_count = getattr(self, '_m3u_count', 0) + 1
                 else:
                     enhanced_log(
-                        f"â“ [UNKNOWN_REQUEST] Richiesta sconosciuta: {
-                            parsed.path}", "WARNING", "SERVER")
+                        "[UNKNOWN_REQUEST] Unknown request: %s" % parsed.path,
+                        "WARNING",
+                        "SERVER")
 
                 if parsed.path.startswith('/proxy/'):
                     enhanced_log(
-                        f"ðŸŽ¯ [SERVER] === INIZIO PROCESSAMENTO RICHIESTA PROXY ===",
+                        "[SERVER] === START PROXY REQUEST PROCESSING ===",
                         "INFO",
                         "SERVER")
 
                     params = parse_qs(parsed.query)
 
                     enhanced_log(
-                        f"ðŸŽ¯ Richiesta proxy valida: {
-                            parsed.path}", "INFO", "SERVER")
+                        "Valid proxy request: %s" % parsed.path,
+                        "INFO",
+                        "SERVER")
 
                     from .AppCore import service_monitor_callback
 
-                    # Estrai parametri
                     kwargs = {k: v[0] for k, v in params.items()}
                     enhanced_log(
-                        f"ðŸ“‹ Parametri estratti: {
-                            len(kwargs)} elementi", "INFO", "SERVER")
+                        "Extracted parameters: %d elements" % len(kwargs),
+                        "INFO",
+                        "SERVER")
                     enhanced_log(
-                        f"ðŸ” [SERVER] Parametri dettaglio: {
-                            list(
-                                kwargs.keys())}",
+                        "[SERVER] Parameters detail: %s" % list(kwargs.keys()),
                         "DEBUG",
                         "SERVER")
 
-                    # Chiama AppCore con timeout
                     enhanced_log(
-                        f"ðŸ”„ [SERVER] === CHIAMATA APPCORE ===",
+                        "[SERVER] === CALLING APPCORE ===",
                         "INFO",
                         "SERVER")
                     try:
                         result = service_monitor_callback(
                             parsed.path, **kwargs)
                         enhanced_log(
-                            f"âœ… [SERVER] AppCore risposta ricevuta", "INFO", "SERVER")
+                            "[OK] [SERVER] AppCore response received",
+                            "INFO",
+                            "SERVER")
                     except Exception as appcore_error:
                         enhanced_log(
-                            f"âŒ [SERVER] ERRORE APPCORE: {
-                                type(appcore_error).__name__}: {
-                                str(appcore_error)}", "ERROR", "SERVER")
+                            "[ERROR] [SERVER] APPCORE ERROR: %s: %s" % (
+                                type(appcore_error).__name__, str(appcore_error)),
+                            "ERROR",
+                            "SERVER")
                         self.send_error(
-                            500, f"AppCore Error: {
-                                str(appcore_error)}")
+                            500, "AppCore Error: %s" % str(appcore_error))
                         return
 
-                    # Prepara content
                     enhanced_log(
-                        f"ðŸ“¦ [SERVER] === PREPARAZIONE CONTENUTO RISPOSTA ===",
+                        "[SERVER] === PREPARING RESPONSE CONTENT ===",
                         "INFO",
                         "SERVER")
                     if isinstance(result, dict) and result.get("redirect_url"):
@@ -321,7 +313,9 @@ def start_simple_server(port=7860):
                         response_status = int(result.get("status", 302) or 302)
                         content_type = result.get("content_type", "video/mp4")
                         enhanced_log(
-                            f"ðŸŽ¬ [SERVER] Redirect a media diretto: {redirect_url[:100]}...", "INFO", "SERVER")
+                            "[SERVER] Redirect to direct media: %s..." % redirect_url[:100],
+                            "INFO",
+                            "SERVER")
                         self.send_response(response_status)
                         self.send_header('Location', redirect_url)
                         self.send_header('Content-Type', content_type)
@@ -333,27 +327,25 @@ def start_simple_server(port=7860):
                     content, response_status, content_type = normalize_appcore_result(
                         result)
                     enhanced_log(
-                        f"ðŸ“‹ [SERVER] Contenuto normalizzato: {
-                            len(content)} bytes, status={response_status}",
+                        "[SERVER] Normalised content: %d bytes, status=%d" % (
+                            len(content), response_status),
                         "INFO",
                         "SERVER")
 
-                    # Verifica contenuto non vuoto
                     if len(content) == 0:
                         enhanced_log(
-                            f"âŒ [SERVER] CONTENUTO VUOTO - PROBLEMA CRITICO",
+                            "[ERROR] [SERVER] EMPTY CONTENT - CRITICAL ERROR",
                             "ERROR",
                             "SERVER")
                         self.send_error(500, "Empty content from AppCore")
                         return
 
-                    # Gestisci Range requests
                     range_header = self.headers.get('Range')
                     if content_type == 'video/mp2t':
                         range_header = None
                     if range_header:
                         enhanced_log(
-                            f"ðŸ” [RANGE_REQUEST] Range richiesto: {range_header}",
+                            "[RANGE_REQUEST] Range requested: %s" % range_header,
                             "DEBUG",
                             "SERVER")
                         try:
@@ -367,34 +359,34 @@ def start_simple_server(port=7860):
                                 self.send_response(response_status)
                         except Exception as e:
                             enhanced_log(
-                                f"âŒ Errore parsing Range: {e}", "ERROR", "SERVER")
+                                "[ERROR] Range parsing error: %s" % e,
+                                "ERROR",
+                                "SERVER")
                             self.send_response(response_status)
                     else:
                         self.send_response(response_status)
 
-                    # Headers - determina content type dal risultato
                     enhanced_log(
-                        f"ðŸ“ [SERVER] === IMPOSTAZIONE HEADERS RISPOSTA ===",
+                        "[SERVER] === SETTING RESPONSE HEADERS ===",
                         "INFO",
                         "SERVER")
                     if content_type:
                         self.send_header('Content-Type', content_type)
                         if content_type == 'video/mp4':
                             enhanced_log(
-                                "ðŸŽ¬ Invio segmento fMP4", "INFO", "SERVER")
+                                "Sending fMP4 segment", "INFO", "SERVER")
                         elif content_type == 'video/mp2t':
                             enhanced_log(
-                                "ðŸ“º Invio segmento TS", "INFO", "SERVER")
+                                "Sending TS segment", "INFO", "SERVER")
                         else:
-                            enhanced_log("ðŸ“„ Invio M3U8", "INFO", "SERVER")
+                            enhanced_log("Sending M3U8", "INFO", "SERVER")
                     elif '/ts' in parsed.path:
                         self.send_header('Content-Type', 'video/mp2t')
-                        enhanced_log(
-                            "ðŸ“º Invio segmento TS", "INFO", "SERVER")
+                        enhanced_log("Sending TS segment", "INFO", "SERVER")
                     else:
                         self.send_header(
                             'Content-Type', 'application/vnd.apple.mpegurl')
-                        enhanced_log("ðŸ“„ Invio M3U8", "INFO", "SERVER")
+                        enhanced_log("Sending M3U8", "INFO", "SERVER")
 
                     self.send_header(
                         'Accept-Ranges',
@@ -402,82 +394,76 @@ def start_simple_server(port=7860):
                     self.send_header('Content-Length', str(len(content)))
                     self.end_headers()
 
-                    enhanced_log(
-                        f"ðŸ“¤ Invio {
-                            len(content)} bytes",
-                        "INFO",
-                        "SERVER")
+                    enhanced_log("Sending %d bytes" % len(content), "INFO", "SERVER")
 
-                    # Verifica finale prima dell'invio
                     if '/ts' in parsed.path and content_type == 'video/mp2t' and len(
                             content) > 0:
                         first_byte = content[0] if isinstance(
                             content, bytes) else ord(content[0])
                         enhanced_log(
-                            f"ðŸ” [SERVER] Primo byte TS: 0x{
-                                first_byte:02x}", "DEBUG", "SERVER")
+                            "[SERVER] TS first byte: 0x%02x" % first_byte,
+                            "DEBUG",
+                            "SERVER")
                         if first_byte == 0x47:
                             enhanced_log(
-                                f"âœ… [SERVER] TS valido (sync byte corretto)", "INFO", "SERVER")
+                                "[OK] [SERVER] Valid TS (correct sync byte)",
+                                "INFO",
+                                "SERVER")
                         else:
                             enhanced_log(
-                                f"âš ï¸ [SERVER] TS potenzialmente invalido (sync byte: 0x{
-                                    first_byte:02x})", "WARNING", "SERVER")
+                                "[WARNING] [SERVER] Potentially invalid TS (sync byte: 0x%02x)" % first_byte,
+                                "WARNING",
+                                "SERVER")
 
                     self.wfile.write(content)
                     enhanced_log(
-                        f"âœ… [SERVER] === RISPOSTA INVIATA CON SUCCESSO ===",
+                        "[OK] [SERVER] === RESPONSE SENT SUCCESSFULLY ===",
                         "INFO",
                         "SERVER")
                 else:
                     enhanced_log(
-                        f"âŒ Path non valido: {
-                            parsed.path}", "WARNING", "SERVER")
+                        "[ERROR] Invalid path: %s" % parsed.path,
+                        "WARNING",
+                        "SERVER")
                     self.send_error(404)
 
             except BrokenPipeError:
-                # Client ha chiuso la connessione - non Ã¨ un errore critico
                 enhanced_log(
-                    "âš ï¸ [BROKEN_PIPE] Client ha chiuso la connessione",
+                    "[WARNING] [BROKEN_PIPE] Client closed connection",
                     "WARNING",
                     "SERVER")
             except ConnectionResetError:
-                # Connessione resettata dal client
                 enhanced_log(
-                    "âš ï¸ [CONNECTION_RESET] Connessione resettata dal client",
+                    "[WARNING] [CONNECTION_RESET] Connection reset by client",
                     "WARNING",
                     "SERVER")
             except Exception as e:
                 enhanced_log(
-                    f"âŒ [SERVER] === ERRORE CRITICO HANDLER ===",
+                    "[ERROR] [SERVER] === CRITICAL HANDLER ERROR ===",
                     "ERROR",
                     "SERVER")
                 enhanced_log(
-                    f"âŒ [SERVER] Errore: {
-                        type(e).__name__}: {
-                        str(e)}",
+                    "[ERROR] [SERVER] Error: %s: %s" % (
+                        type(e).__name__, str(e)),
                     "ERROR",
                     "SERVER")
 
-                # Log stack trace per debug
                 import traceback
                 enhanced_log(
-                    f"ðŸ” [SERVER] Stack trace: {
-                        traceback.format_exc()}",
+                    "[SERVER] Stack trace: %s" % traceback.format_exc(),
                     "ERROR",
                     "SERVER")
 
                 try:
-                    self.send_error(500, f"Server Error: {str(e)}")
+                    self.send_error(500, "Server Error: %s" % str(e))
                 except Exception as send_error_exc:
-                    # Se anche send_error fallisce, ignora silenziosamente
                     enhanced_log(
-                        f"âŒ [SERVER] Impossibile inviare errore al client: {send_error_exc}",
+                        "[ERROR] [SERVER] Unable to send error to client: %s" % send_error_exc,
                         "ERROR",
                         "SERVER")
 
         def log_message(self, format, *args):
-            # Disabilita log HTTP standard per evitare spam
+            # Disable default HTTP log to avoid spam
             pass
 
     def run_server():
@@ -488,49 +474,47 @@ def start_simple_server(port=7860):
             _native_server.daemon_threads = True
             _server_port = port
             enhanced_log(
-                f"âœ… Server HTTP nativo avviato su porta {port}",
+                "[OK] Native HTTP server started on port %d" % port,
                 "INFO",
                 "SERVER")
-            # Test di connettivitÃ 
             import socket
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             result = sock.connect_ex(('127.0.0.1', port))
             sock.close()
             if result == 0:
                 enhanced_log(
-                    f"âœ… [CONNECTIVITY] Porta {port} raggiungibile",
+                    "[OK] [CONNECTIVITY] Port %d reachable" % port,
                     "INFO",
                     "SERVER")
             else:
                 enhanced_log(
-                    f"âŒ [CONNECTIVITY] Porta {port} NON raggiungibile",
+                    "[ERROR] [CONNECTIVITY] Port %d NOT reachable" % port,
                     "ERROR",
                     "SERVER")
 
             _native_server.serve_forever()
         except Exception as e:
-            enhanced_log(f"âŒ Errore server nativo: {e}", "ERROR", "SERVER")
+            enhanced_log("[ERROR] Native server error: %s" % e, "ERROR", "SERVER")
         finally:
             _native_server = None
             _server_port = None
 
-    # Avvia in thread separato
     _server_thread = threading.Thread(target=run_server, daemon=True)
     _server_thread.start()
     enhanced_log(
-        "ðŸš€ Server HTTP nativo avviato in background",
+        "[INFO] Native HTTP server started in background",
         "INFO",
         "SERVER")
     return True
 
 
 def start_proxy_server(port=7860):
-    """Wrapper di compatibilita per proxy_manager."""
+    """Compatibility wrapper for proxy_manager."""
     return start_simple_server(port)
 
 
 def stop_proxy_server():
-    """Arresta il server HTTP nativo se avviato tramite StreamProxy."""
+    """Stop the native HTTP server if started by StreamProxy."""
     global _native_server, _server_thread, _server_port
     try:
         if _native_server is None:
@@ -541,7 +525,7 @@ def stop_proxy_server():
             _server_thread.join(2)
         return True
     except Exception as e:
-        enhanced_log(f"Errore arresto server nativo: {e}", "ERROR", "SERVER")
+        enhanced_log("[ERROR] Error stopping native server: %s" % e, "ERROR", "SERVER")
         return False
     finally:
         _native_server = None

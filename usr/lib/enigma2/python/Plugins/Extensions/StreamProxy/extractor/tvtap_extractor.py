@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-TVTap Resolver per StreamViX MFP
-Basato sul codice originale funzionante, ottimizzato per Python 3.
+TVTap Resolver for StreamViX MFP
+Based on the original working code, optimised for Python 3.
 """
 
 # ==============================================================================
@@ -17,18 +17,18 @@ from binascii import a2b_hex
 import os
 
 
-# Aggiungi la directory 'libs' del plugin al sys.path
+# Add the plugin 'libs' directory to sys.path
 plugin_dir = os.path.dirname(os.path.abspath(__file__))
 libs_dir = os.path.join(os.path.dirname(plugin_dir), 'libs')
 if libs_dir not in sys.path:
     sys.path.insert(0, libs_dir)
 
-# Gestione dipendenze terze parti
+# Handle third-party dependencies
 try:
     import requests
 except ImportError:
     sys.exit(
-        "FATAL: Libreria 'requests' non trovata. Installare con: pip install requests")
+        "FATAL: 'requests' library not found. Install with: pip install requests")
 
 try:
     from Crypto.Cipher import PKCS1_v1_5 as Cipher_PKCS1_v1_5
@@ -43,24 +43,24 @@ try:
 except ImportError:
     HAVE_DES = False
 
-# Import del logger custom
+# Import custom logger
 try:
     from ..StreamProxyLog import enhanced_log
 except ImportError:
-    # Fallback a un logger semplice se eseguito come script standalone
+    # Fallback to a simple logger when run as a standalone script
     def enhanced_log(message, level="INFO", component="FALLBACK"):
-        print(f"[{level}] [{component}] {message}", file=sys.stderr)
+        print("[%s] [%s] %s" % (level, component, message), file=sys.stderr)
 
 # ==============================================================================
-# 2. COSTANTI
+# 2. CONSTANTS
 # ==============================================================================
 
 # -- API Endpoints --
 API_BASE_URL = "https://rocktalk.net/tv/index.php"
-CHANNELS_ENDPOINT = f"{API_BASE_URL}?case=get_all_channels"
-STREAM_ENDPOINT = f"{API_BASE_URL}?case=get_channel_link_with_token_latest"
+CHANNELS_ENDPOINT = "%s?case=get_all_channels" % API_BASE_URL
+STREAM_ENDPOINT = "%s?case=get_channel_link_with_token_latest" % API_BASE_URL
 
-# -- Credenziali e Headers --
+# -- Credentials and Headers --
 USER_AGENT = 'USER-AGENT-tvtap-APP-V2'
 APP_TOKEN = '37a6259cc0c1dae299a7866489dff0bd'
 USERNAME = "603803577"
@@ -77,7 +77,7 @@ HEADERS_STREAM = {
     'app-token': APP_TOKEN,
 }
 
-# -- Costanti di crittografia --
+# -- Encryption constants --
 RSA_PUBKEY_HEX = (
     "30819f300d06092a864886f70d010101050003818d003081890281"
     "8100bfa5514aa0550688ffde568fd95ac9130fcdd8825bdecc46f1"
@@ -93,32 +93,32 @@ RSA_MSG_HEX = (
 DES_KEY = b"98221122"
 
 # ==============================================================================
-# 3. FUNZIONI DI UTILITY
+# 3. UTILITY FUNCTIONS
 # ==============================================================================
 
 
 def check_dependencies():
-    """Controlla le dipendenze critiche e termina se non soddisfatte."""
+    """Check critical dependencies and exit if not satisfied."""
     if not HAVE_CRYPTO:
         sys.exit(
-            "FATAL: Libreria 'pycryptodome' non trovata. Installare con: pip install pycryptodome")
+            "FATAL: 'pycryptodome' library not found. Install with: pip install pycryptodome")
     if not HAVE_DES:
         sys.exit(
-            "FATAL: Libreria 'pyDes' non trovata. Installare con: pip install pyDes")
+            "FATAL: 'pyDes' library not found. Install with: pip install pyDes")
 
 # ==============================================================================
-# 4. LOGICA PRINCIPALE
+# 4. MAIN LOGIC
 # ==============================================================================
 
 
 def generate_payload():
-    """Genera il payload crittografato per le richieste API."""
+    """Generate the encrypted payload for API requests."""
     if not HAVE_CRYPTO:
         enhanced_log(
-            "pycryptodome non disponibile, impossibile generare il payload.",
+            "pycryptodome not available, unable to generate payload.",
             level="ERROR",
             component="TVTAP")
-        raise ImportError("pycryptodome non è installato.")
+        raise ImportError("pycryptodome is not installed.")
 
     pubkey = RSA.importKey(a2b_hex(RSA_PUBKEY_HEX))
     msg = a2b_hex(RSA_MSG_HEX)
@@ -127,9 +127,9 @@ def generate_payload():
 
 
 def get_tvtap_channels():
-    """Ottiene la lista dei canali italiani da TVTap."""
+    """Get the list of Italian channels from TVTap."""
     enhanced_log(
-        "Tentativo di ottenere la lista canali dall'API...",
+        "Attempting to get channel list from API...",
         level="DEBUG",
         component="TVTAP")
     try:
@@ -141,14 +141,14 @@ def get_tvtap_channels():
             headers=HEADERS_CHANNELS,
             data=data,
             timeout=REQUEST_TIMEOUT)
-        r.raise_for_status()  # Solleva un'eccezione per status code non 2xx
+        r.raise_for_status()
 
         response_json = r.json()
         msg = response_json.get("msg")
 
         if not isinstance(msg, dict) or "channels" not in msg:
             enhanced_log(
-                f"Struttura della risposta non valida: {response_json}",
+                "Invalid response structure: %s" % response_json,
                 level="WARNING",
                 component="TVTAP")
             return get_static_italian_channels()
@@ -165,24 +165,23 @@ def get_tvtap_channels():
         ]
 
         enhanced_log(
-            f"Trovati {
-                len(italian_channels)} canali italiani dall'API.",
+            "Found %d Italian channels from API." % len(italian_channels),
             level="DEBUG",
             component="TVTAP")
         return italian_channels if italian_channels else get_static_italian_channels()
 
     except (requests.RequestException, json.JSONDecodeError, ImportError) as e:
         enhanced_log(
-            f"Errore API o parsing: {e}. Fallback sulla lista statica.",
+            "API or parsing error: %s. Falling back to static list." % e,
             level="WARNING",
             component="TVTAP")
         return get_static_italian_channels()
 
 
 def get_tvtap_stream(channel_id):
-    """Ottiene lo URL dello stream per un dato ID di canale."""
+    """Get the stream URL for a given channel ID."""
     enhanced_log(
-        f"Richiesta stream per il canale ID: {channel_id}",
+        "Requesting stream for channel ID: %s" % channel_id,
         level="DEBUG",
         component="TVTAP")
     try:
@@ -204,7 +203,7 @@ def get_tvtap_stream(channel_id):
 
         if not isinstance(msg_res, dict) or "channel" not in msg_res:
             enhanced_log(
-                f"Risposta per lo stream non valida: {msg_res}",
+                "Invalid stream response: %s" % msg_res,
                 level="WARNING",
                 component="TVTAP")
             return None
@@ -219,27 +218,27 @@ def get_tvtap_stream(channel_id):
                     link = decrypted.decode("utf-8", errors="ignore")
                     if link and link != "dummytext":
                         enhanced_log(
-                            f"Stream trovato per canale {channel_id}",
+                            "Stream found for channel %s" % channel_id,
                             level="DEBUG",
                             component="TVTAP")
                         return link
 
         enhanced_log(
-            "Nessun link stream valido trovato nella risposta.",
+            "No valid stream link found in response.",
             level="DEBUG",
             component="TVTAP")
         return None
 
     except (requests.RequestException, json.JSONDecodeError, ImportError, IndexError) as e:
         enhanced_log(
-            f"Errore durante il recupero dello stream: {e}",
+            "Error while retrieving stream: %s" % e,
             level="ERROR",
             component="TVTAP")
         return None
 
 
 def normalize_channel_name(name):
-    """Normalizza il nome del canale per un matching flessibile."""
+    """Normalise the channel name for flexible matching."""
     if not name:
         return ""
     name = name.strip().upper()
@@ -249,51 +248,49 @@ def normalize_channel_name(name):
 
 
 def find_channel_by_name(channel_name, channels):
-    """Trova un canale per nome con vari livelli di matching."""
+    """Find a channel by name with various levels of matching."""
     if not channel_name or not channels:
         return None
 
     normalized_search = normalize_channel_name(channel_name)
     enhanced_log(
-        f"Ricerca normalizzata per: '{normalized_search}'",
+        "Normalised search: '%s'" % normalized_search,
         level="DEBUG",
         component="TVTAP")
 
-    # 1. Matching esatto
+    # 1. Exact match
     for channel in channels:
         if normalize_channel_name(
             channel.get(
                 "name",
                 "")) == normalized_search:
             enhanced_log(
-                f"Match esatto trovato: {
-                    channel.get('name')}",
+                "Exact match found: %s" % channel.get('name'),
                 level="DEBUG",
                 component="TVTAP")
             return channel
 
-    # 2. Matching parziale
+    # 2. Partial match
     for channel in channels:
         normalized_channel = normalize_channel_name(channel.get("name", ""))
         if normalized_search in normalized_channel or normalized_channel in normalized_search:
             enhanced_log(
-                f"Match parziale trovato: {
-                    channel.get('name')}",
+                "Partial match found: %s" % channel.get('name'),
                 level="DEBUG",
                 component="TVTAP")
             return channel
 
     enhanced_log(
-        f"Nessun match trovato per: {channel_name}",
+        "No match found for: %s" % channel_name,
         level="DEBUG",
         component="TVTAP")
     return None
 
 
 def get_static_italian_channels():
-    """Restituisce una lista statica di canali italiani come fallback."""
+    """Return a static list of Italian channels as a fallback."""
     enhanced_log(
-        "Restituzione della lista statica dei canali.",
+        "Returning static channel list.",
         level="DEBUG",
         component="TVTAP")
     return [
@@ -374,44 +371,44 @@ def get_static_italian_channels():
     ]
 
 # ==============================================================================
-# 5. ESECUZIONE DA RIGA DI COMANDO
+# 5. COMMAND-LINE EXECUTION
 # ==============================================================================
 
 
 def main():
-    """Punto di ingresso principale per l'esecuzione da riga di comando."""
+    """Main entry point for command-line execution."""
     parser = argparse.ArgumentParser(
-        description="Resolver per canali TVTap.",
+        description="Resolver for TVTap channels.",
         formatter_class=argparse.RawTextHelpFormatter
     )
 
-    # Argomenti principali (mutuamente esclusivi)
+    # Main arguments (mutually exclusive)
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument(
         "channel_name",
         nargs="?",
         default=None,
-        help="Nome del canale da risolvere (es. 'Rai 1').")
+        help="Channel name to resolve (e.g. 'Rai 1').")
     group.add_argument(
         "--dump-channels",
         action="store_true",
-        help="Mostra la lista completa dei canali italiani in formato JSON.")
+        help="Display the full list of Italian channels in JSON format.")
     group.add_argument(
         "--build-cache",
         metavar="FILE_PATH",
         nargs="?",
         const="tvtap_cache.json",
-        help="Genera un file cache JSON dei canali. (default: tvtap_cache.json)")
+        help="Generate a JSON cache file of channels. (default: tvtap_cache.json)")
 
-    # Opzioni aggiuntive
+    # Additional options
     parser.add_argument(
         "--original-link",
         action="store_true",
-        help="Restituisce il link nel formato 'tvtap://<ID>' invece dello stream URL.")
+        help="Return the link in 'tvtap://<ID>' format instead of the stream URL.")
 
     args = parser.parse_args()
 
-    # -- Gestione Azioni --
+    # -- Handle Actions --
 
     if args.dump_channels:
         check_dependencies()
@@ -422,7 +419,7 @@ def main():
     if args.build_cache:
         check_dependencies()
         enhanced_log(
-            "Creazione della cache dei canali...",
+            "Creating channel cache...",
             level="INFO",
             component="TVTAP")
         channels = get_tvtap_channels()
@@ -433,35 +430,34 @@ def main():
             with open(args.build_cache, "w", encoding="utf-8") as f:
                 json.dump({"channels": cache}, f, ensure_ascii=False, indent=2)
             print(
-                f"Cache TVTap generata con successo in '{
-                    args.build_cache}'!")
+                "TVTap cache successfully generated in '%s'!" % args.build_cache)
             sys.exit(0)
         except IOError as e:
             enhanced_log(
-                f"Impossibile scrivere il file cache: {e}",
+                "Unable to write cache file: %s" % e,
                 level="ERROR",
                 component="TVTAP")
             sys.exit(1)
 
-    # -- Risoluzione Canale (azione di default) --
+    # -- Channel Resolution (default action) --
     if not args.channel_name:
-        parser.error("Il nome del canale è richiesto.")
+        parser.error("Channel name is required.")
 
     check_dependencies()
 
-    # Gestione ID diretto (es. tvtap_id:123)
+    # Handle direct ID (e.g. tvtap_id:123)
     if args.channel_name.startswith("tvtap_id:"):
         channel_id = args.channel_name.split(":", 1)[1]
         enhanced_log(
-            f"ID TVTap diretto rilevato: {channel_id}",
+            "Direct TVTap ID detected: %s" % channel_id,
             level="DEBUG",
             component="TVTAP")
     else:
-        # Ricerca per nome
+        # Search by name
         channels = get_tvtap_channels()
         if not channels:
             enhanced_log(
-                "Nessun canale recuperato.",
+                "No channels retrieved.",
                 level="ERROR",
                 component="TVTAP")
             sys.exit(2)
@@ -469,8 +465,7 @@ def main():
         found_channel = find_channel_by_name(args.channel_name, channels)
         if not found_channel:
             enhanced_log(
-                f"Canale '{
-                    args.channel_name}' non trovato.",
+                "Channel '%s' not found." % args.channel_name,
                 level="WARNING",
                 component="TVTAP")
             sys.exit(3)
@@ -478,28 +473,26 @@ def main():
         channel_id = found_channel.get("id")
         if not channel_id:
             enhanced_log(
-                f"Nessun ID trovato per il canale '{
-                    args.channel_name}'.",
+                "No ID found for channel '%s'." % args.channel_name,
                 level="ERROR",
                 component="TVTAP")
             sys.exit(4)
 
         enhanced_log(
-            f"Canale trovato: {
-                found_channel.get('name')} (ID: {channel_id})",
+            "Channel found: %s (ID: %s)" % (found_channel.get('name'), channel_id),
             level="INFO",
             component="TVTAP")
 
-    # Restituzione del link richiesto
+    # Return the requested link
     if args.original_link:
-        print(f"tvtap://{channel_id}")
+        print("tvtap://%s" % channel_id)
     else:
         stream_url = get_tvtap_stream(channel_id)
         if stream_url:
             print(stream_url)
         else:
             enhanced_log(
-                "Impossibile ottenere lo URL dello stream.",
+                "Unable to obtain stream URL.",
                 level="ERROR",
                 component="TVTAP")
             sys.exit(5)
@@ -510,7 +503,7 @@ if __name__ == "__main__":
         main()
     except Exception as e:
         enhanced_log(
-            f"Errore non gestito: {e}",
+            "Unhandled error: %s" % e,
             level="CRITICAL",
             component="TVTAP")
         sys.exit(1)

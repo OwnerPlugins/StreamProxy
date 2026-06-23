@@ -1,4 +1,5 @@
-# sportonline_extractor.py - Sportsonline/Sportzonline extractor per
+# -*- coding: utf-8 -*-
+# sportonline_extractor.py - Sportsonline/Sportzonline extractor for
 # Enigma2 Python 3
 import re
 import time
@@ -72,7 +73,7 @@ def extract_unpack(packed_js):
 
 
 class SportsonlineExtractor:
-    """Versione sincrona Enigma2 allineata al source EasyProxy."""
+    """Synchronous Enigma2 version aligned with EasyProxy source."""
 
     def __init__(self, request_headers=None):
         self.request_headers = request_headers or {}
@@ -156,31 +157,33 @@ class SportsonlineExtractor:
             initial_delay=1,
             timeout=15):
         if not self.session:
-            raise SportOnlineExtractorError("requests non disponibile")
+            raise SportOnlineExtractorError("requests not available")
         final_headers = headers or self.base_headers
         last_error = None
         for attempt in range(retries):
             try:
-                enhanced_log("GET %s/%s %s" %
-                             (attempt + 1, retries, url[:120]), "DEBUG", "SPORTONLINE")
+                enhanced_log(
+                    "GET %d/%d %s" % (attempt + 1, retries, url[:120]),
+                    "DEBUG",
+                    "SPORTONLINE")
                 response = self.session.get(
                     url, headers=final_headers, timeout=timeout, verify=False)
                 if response.status_code == 200:
                     html = response.text
                     if self._looks_like_block_page(html):
-                        raise SportOnlineExtractorError("block page rilevata")
+                        raise SportOnlineExtractorError("block page detected")
                     return html, response.url
                 last_error = "HTTP %s" % response.status_code
             except Exception as exc:
                 last_error = exc
                 enhanced_log(
-                    "Richiesta fallita: %s" %
-                    exc, "WARNING", "SPORTONLINE")
+                    "Request failed: %s" % exc,
+                    "WARNING",
+                    "SPORTONLINE")
             if attempt < retries - 1:
                 time.sleep(initial_delay)
         raise SportOnlineExtractorError(
-            "Richiesta fallita per %s: %s" %
-            (url, last_error))
+            "Request failed for %s: %s" % (url, last_error))
 
     @staticmethod
     def _detect_packed_blocks(html):
@@ -279,14 +282,15 @@ class SportsonlineExtractor:
                     break
                 except Exception as exc:
                     enhanced_log(
-                        "Iframe candidate fallito %s: %s" %
-                        (candidate_url, exc), "WARNING", "SPORTONLINE")
+                        "Iframe candidate failed %s: %s" % (candidate_url, exc),
+                        "WARNING",
+                        "SPORTONLINE")
             if not iframe_html:
                 raise SportOnlineExtractorError(
-                    "Tutti gli iframe candidate sono falliti")
+                    "All iframe candidates failed")
         else:
             enhanced_log(
-                "Nessun iframe, provo HTML principale",
+                "No iframe, trying main HTML",
                 "WARNING",
                 "SPORTONLINE")
 
@@ -300,8 +304,7 @@ class SportsonlineExtractor:
         direct_match = self._extract_m3u8_candidate(iframe_html)
         packed_blocks = self._detect_packed_blocks(iframe_html)
         enhanced_log(
-            "Blocchi packed trovati: %s" %
-            len(packed_blocks),
+            "Packed blocks found: %s" % len(packed_blocks),
             "DEBUG",
             "SPORTONLINE")
 
@@ -320,14 +323,15 @@ class SportsonlineExtractor:
                         break
                 except Exception as exc:
                     enhanced_log(
-                        "Unpack fallito: %s" %
-                        exc, "DEBUG", "SPORTONLINE")
+                        "Unpack failed: %s" % exc,
+                        "DEBUG",
+                        "SPORTONLINE")
 
         if not m3u8_url:
-            raise SportOnlineExtractorError("Nessun URL m3u8 trovato")
+            raise SportOnlineExtractorError("No m3u8 URL found")
 
         m3u8_url = self._normalize_stream_url(m3u8_url, iframe_url)
-        enhanced_log("M3U8 estratto: %s" % m3u8_url, "INFO", "SPORTONLINE")
+        enhanced_log("M3U8 extracted: %s" % m3u8_url, "INFO", "SPORTONLINE")
         return {
             "resolved_url": m3u8_url,
             "destination_url": m3u8_url,
@@ -354,8 +358,9 @@ def extract_sportonline(url, request_headers=None):
             url, request_headers=request_headers)
     except Exception as exc:
         enhanced_log(
-            "Errore estrazione Sportsonline: %s" %
-            exc, "ERROR", "SPORTONLINE")
+            "Sportsonline extraction error: %s" % exc,
+            "ERROR",
+            "SPORTONLINE")
         return None
 
 

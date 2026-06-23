@@ -1,5 +1,6 @@
-# utils/packed.py - Unpacker per JavaScript packed (adattato per Enigma2)
-# Basato su EasyProxy/utils/packed.py
+# -*- coding: utf-8 -*-
+# utils/packed.py - Unpacker for JavaScript packed (adapted for Enigma2)
+# Based on EasyProxy/utils/packed.py
 
 import re
 import logging
@@ -8,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 
 def detect(source):
-    """Rileva se il codice JavaScript è packed"""
+    """Detect if the JavaScript code is packed."""
     if "eval(function(p,a,c,k,e,d)" in source:
         return True
     return False

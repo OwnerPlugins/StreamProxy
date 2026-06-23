@@ -1,103 +1,103 @@
-#!/usr/bin/python
-# utils.py - Utilità per la gestione del plugin StreamProxy
+# -*- coding: utf-8 -*-
+# utils.py - Utility functions for StreamProxy plugin management
 
 import os
 import sys
 import time
 import socket
-import traceback
 
 
 def check_server_status(port=None):
-    """Verifica lo stato del server proxy"""
+    """Check the status of the proxy server."""
     try:
-        # Importa i moduli necessari
         from .StreamProxyLog import enhanced_log
         from .config import config
 
-        # Ottieni la porta dal config se non specificata
+        # Get the port from config if not specified
         if port is None:
             port = config.plugins.streamproxy.port.value
 
-        # Verifica se la porta è in ascolto
+        # Check if the port is listening
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.settimeout(2)
         result = sock.connect_ex(('127.0.0.1', port))
         sock.close()
 
         if result == 0:
-            # Verifica che sia il nostro server
+            # Verify that it is our server
             try:
                 import urllib.request
-                test_url = f"http://127.0.0.1:{port}/status"
+                test_url = "http://127.0.0.1:%d/status" % port
                 with urllib.request.urlopen(test_url, timeout=2) as response:
                     if response.getcode() == 200:
                         enhanced_log(
-                            f"Server proxy attivo sulla porta {port}", "INFO", "UTILS")
+                            "Proxy server active on port %d" % port,
+                            "INFO",
+                            "UTILS")
                         return True
             except BaseException:
                 enhanced_log(
-                    f"La porta {port} è in uso ma non risponde come server proxy",
+                    "Port %d is in use but does not respond as a proxy server" % port,
                     "WARNING",
                     "UTILS")
                 return False
 
         enhanced_log(
-            f"Server proxy non in ascolto sulla porta {port}",
+            "Proxy server not listening on port %d" % port,
             "WARNING",
             "UTILS")
         return False
     except Exception as e:
-        print(f"Errore durante la verifica del server: {str(e)}")
+        print("Error while checking the server: %s" % str(e))
         return False
 
 
 def restart_server():
-    """Riavvia il server proxy"""
+    """Restart the proxy server."""
     try:
         from .StreamProxyLog import enhanced_log
         from . import proxy_manager
 
-        enhanced_log("Riavvio del server proxy in corso...", "INFO", "UTILS")
+        enhanced_log("Restarting the proxy server...", "INFO", "UTILS")
 
-        # Ferma il server se è in esecuzione
+        # Stop the server if it is running
         proxy_manager.stop_proxy()
-        time.sleep(1)  # Attendi che il server si fermi
+        time.sleep(1)  # Wait for the server to stop
 
-        # Riavvia il server
+        # Restart the server
         if proxy_manager.start_proxy():
             enhanced_log(
-                "✅ Server proxy riavviato con successo",
+                "[OK] Proxy server restarted successfully",
                 "INFO",
                 "UTILS")
 
-            # Verifica che il server sia effettivamente in ascolto
+            # Verify that the server is actually listening
             time.sleep(1)
             if check_server_status():
                 enhanced_log(
-                    "✅ Server proxy verificato dopo il riavvio",
+                    "[OK] Proxy server verified after restart",
                     "INFO",
                     "UTILS")
                 return True
             else:
                 enhanced_log(
-                    "❌ Server proxy non risponde dopo il riavvio",
+                    "[FAIL] Proxy server does not respond after restart",
                     "ERROR",
                     "UTILS")
                 return False
         else:
             enhanced_log(
-                "❌ Errore nel riavvio del server proxy",
+                "[FAIL] Error restarting the proxy server",
                 "ERROR",
                 "UTILS")
             return False
     except Exception as e:
-        print(f"Errore durante il riavvio del server: {str(e)}")
+        print("Error while restarting the server: %s" % str(e))
         return False
 
 
 def wait_for_server_start(max_attempts=5, delay=1):
-    """Attende che il server proxy sia completamente avviato"""
+    """Wait for the proxy server to be fully started."""
     from .StreamProxyLog import enhanced_log
     from .config import config
 
@@ -105,17 +105,18 @@ def wait_for_server_start(max_attempts=5, delay=1):
 
     for attempt in range(max_attempts):
         try:
-            # Verifica connessione TCP
+            # Check TCP connection
             with socket.create_connection(("127.0.0.1", proxy_port), timeout=2):
-                # Verifica HTTP
+                # Check HTTP
                 try:
                     import urllib.request
-                    test_url = f"http://127.0.0.1:{proxy_port}/status"
+                    test_url = "http://127.0.0.1:%d/status" % proxy_port
                     with urllib.request.urlopen(test_url, timeout=2) as response:
                         if response.getcode() == 200:
                             enhanced_log(
-                                f"Server proxy avviato (tentativo {
-                                    attempt + 1})", "INFO", "UTILS")
+                                "Proxy server started (attempt %d/%d)" % (attempt + 1, max_attempts),
+                                "INFO",
+                                "UTILS")
                             return True
                 except BaseException:
                     pass
@@ -123,8 +124,7 @@ def wait_for_server_start(max_attempts=5, delay=1):
             pass
 
         enhanced_log(
-            f"In attesa del server... ({
-                attempt + 1}/{max_attempts})",
+            "Waiting for the server... (%d/%d)" % (attempt + 1, max_attempts),
             "INFO",
             "UTILS")
         time.sleep(delay)
@@ -132,34 +132,34 @@ def wait_for_server_start(max_attempts=5, delay=1):
     return False
 
 
-# Funzione principale per l'uso da riga di comando
+# Main function for command-line use
 if __name__ == "__main__":
-    # Aggiungi la directory corrente al path
+    # Add the current directory to the path
     current_dir = os.path.dirname(os.path.abspath(__file__))
     if current_dir not in sys.path:
         sys.path.insert(0, current_dir)
 
-    # Gestisci i parametri da riga di comando
+    # Handle command-line arguments
     import argparse
-    parser = argparse.ArgumentParser(description='Utilità StreamProxy')
+    parser = argparse.ArgumentParser(description='StreamProxy Utilities')
     parser.add_argument(
         '--check',
         action='store_true',
-        help='Verifica lo stato del server')
+        help='Check server status')
     parser.add_argument(
         '--restart',
         action='store_true',
-        help='Riavvia il server')
+        help='Restart the server')
     args = parser.parse_args()
 
     if args.check:
         if check_server_status():
-            print("Server proxy attivo e funzionante")
+            print("Proxy server is active and working")
         else:
-            print("Server proxy non attivo")
+            print("Proxy server is not active")
 
     if args.restart:
         if restart_server():
-            print("Server proxy riavviato con successo")
+            print("Proxy server restarted successfully")
         else:
-            print("Errore nel riavvio del server proxy")
+            print("Error restarting the proxy server")
