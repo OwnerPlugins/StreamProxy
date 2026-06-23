@@ -118,36 +118,44 @@ def convert_fmp4_to_ts(fmp4_content, stream_id=None):
 
         enhanced_log(f"🔄 [FMP4_CONVERT] Processamento {len(fmp4_content)} bytes fMP4")
 
-        # ✅ SOLUZIONE CRITICA: Per Freeshot, invia SEMPRE fMP4 diretto
+        # Per Freeshot, invia SEMPRE fMP4 diretto
         # Enigma2 moderno gestisce fMP4 nativamente meglio della conversione TS
         if stream_id and stream_id in STREAM_KEY_INFO:
             stream_info = STREAM_KEY_INFO[stream_id]
+
             if stream_info.get('is_freeshot', False):
                 enhanced_log(
-                    f"✅ [FMP4_DIRECT] Freeshot: invio diretto fMP4 (ottimale per Enigma2)",
+                    "✅ [FMP4_DIRECT] Freeshot: direct fMP4 delivery (optimal for Enigma2)",
                     "INFO",
-                    "proxy_ts")
+                    "proxy_ts"
+                )
+
                 enhanced_log(
-                    f"📊 [FMP4_DIRECT] Dimensione: {
-                        len(fmp4_content)} bytes",
+                    "📊 [FMP4_DIRECT] Size: %d bytes" % len(fmp4_content),
                     "DEBUG",
-                    "proxy_ts")
+                    "proxy_ts"
+                )
+
                 return fmp4_content
 
-        # ✅ SOLUZIONE MIGLIORATA: Init segment obbligatorio per video
+        # Init segment obbligatorio per video
         init_data = b''
         if stream_id and stream_id in STREAM_KEY_INFO:
             init_segment = STREAM_KEY_INFO[stream_id].get('init_segment')
+
             if init_segment:
                 enhanced_log(
-                    f"📦 [FMP4_CONVERT] Usando init segment: {
-                        len(init_segment)} bytes", "DEBUG", "proxy_ts")
+                    "📦 [FMP4_CONVERT] Using init segment: %d bytes" % len(init_segment),
+                    "DEBUG",
+                    "proxy_ts"
+                )
                 init_data = init_segment
             else:
                 enhanced_log(
-                    f"⚠️ [FMP4_CONVERT] Init segment mancante per stream {stream_id}",
+                    "⚠️ [FMP4_CONVERT] Missing init segment for stream %s" % stream_id,
                     "WARNING",
-                    "proxy_ts")
+                    "proxy_ts"
+                )
 
         ts_packets = []
 
@@ -155,7 +163,7 @@ def convert_fmp4_to_ts(fmp4_content, stream_id=None):
         TS_PACKET_SIZE = 188
         TS_PAYLOAD_SIZE = 184  # 188 - 4 byte header
 
-        # ✅ CORREZIONE: PID ottimizzati per Enigma2
+        # PID ottimizzati per Enigma2
         PAT_PID = 0x0000
         PMT_PID = 0x1000
         VIDEO_PID = 0x0100
@@ -164,7 +172,7 @@ def convert_fmp4_to_ts(fmp4_content, stream_id=None):
 
         continuity_counter = 0
 
-        # ✅ SOLUZIONE MIGLIORATA: PAT ottimizzato per Enigma2
+        # PAT ottimizzato per Enigma2
         pat_payload = bytes([
             0x00,  # table_id (PAT)
             0xB0, 0x0D,  # section_syntax_indicator + section_length
@@ -183,7 +191,7 @@ def convert_fmp4_to_ts(fmp4_content, stream_id=None):
         pat_packet = pat_header + pat_padded
         ts_packets.append(pat_packet)
 
-        # ✅ SOLUZIONE MIGLIORATA: PMT con stream_type corretti per Enigma2
+        # PMT con stream_type corretti per Enigma2
         pmt_payload = bytes([
             0x02,  # table_id (PMT)
             0xB0, 0x17,  # section_syntax_indicator + section_length
@@ -192,11 +200,11 @@ def convert_fmp4_to_ts(fmp4_content, stream_id=None):
             0x00, 0x00,  # section_number + last_section_number
             (PCR_PID >> 8) | 0xE0, PCR_PID & 0xFF,  # PCR_PID (video)
             0xF0, 0x00,  # program_info_length (0)
-            # ✅ CORREZIONE: Stream video H.264 AVC
+            # Stream video H.264 AVC
             0x1B,  # stream_type (H.264/AVC) - Enigma2 compatibile
             (VIDEO_PID >> 8) | 0xE0, VIDEO_PID & 0xFF,  # elementary_PID
             0xF0, 0x00,  # ES_info_length (0)
-            # ✅ CORREZIONE: Stream audio AAC
+            # Stream audio AAC
             0x0F,  # stream_type (AAC ADTS) - Enigma2 compatibile
             (AUDIO_PID >> 8) | 0xE0, AUDIO_PID & 0xFF,  # elementary_PID
             0xF0, 0x00,  # ES_info_length (0)
@@ -215,7 +223,7 @@ def convert_fmp4_to_ts(fmp4_content, stream_id=None):
             "DEBUG",
             "proxy_ts")
 
-        # ✅ SOLUZIONE CRITICA: Combina init + payload per metadati video completi
+        # Combina init + payload per metadati video completi
         if init_data:
             # Init segment DEVE essere processato per metadati video corretti
             payload_data = init_data + fmp4_content
@@ -234,22 +242,16 @@ def convert_fmp4_to_ts(fmp4_content, stream_id=None):
                 "WARNING",
                 "proxy_ts")
 
-        # ✅ NUOVO: Timestamp base per sincronizzazione A/V
         import time
         base_timestamp = int(time.time() *
                              90000) & 0x1FFFFFFFF  # 33-bit timestamp
 
-        # ✅ SOLUZIONE MIGLIORATA: PES header ottimizzato per video Enigma2
         video_continuity = 2  # Inizia da 2 (dopo PAT e PMT)
         audio_continuity = 0
-
-        # ✅ NUOVO: Genera PCR iniziale per sincronizzazione
         pcr_base = base_timestamp
-
         # Processa i dati in chunk ottimizzati per Enigma2
         # Spazio per PES header completo nel primo pacchetto
         chunk_size = TS_PAYLOAD_SIZE - 19
-
         # Processa i dati in chunk
         pos = 0
         packet_num = 0
@@ -327,7 +329,7 @@ def convert_fmp4_to_ts(fmp4_content, stream_id=None):
             video_continuity = (video_continuity + 1) % 16
             packet_num += 1
 
-        # ✅ NUOVO: Aggiungi pacchetti audio AAC sintetici per compatibilità A/V
+        # Aggiungi pacchetti audio AAC sintetici per compatibilità A/V
         # Enigma2 si aspetta sia video che audio per funzionare correttamente
         for audio_frame in range(3):  # 3 frame audio per segmento
             # PES header audio AAC
@@ -380,35 +382,40 @@ def convert_fmp4_to_ts(fmp4_content, stream_id=None):
         ts_stream = b''.join(ts_packets)
 
         enhanced_log(
-            f"✅ [FMP4_CONVERT] Creati {
-                len(ts_packets)} pacchetti TS ({
-                len(ts_stream)} bytes)",
+            "✅ [FMP4_CONVERT] Created %d TS packets (%d bytes)" % (
+                len(ts_packets),
+                len(ts_stream)
+            ),
             "INFO",
-            "proxy_ts")
-        enhanced_log(
-            f"📊 [FMP4_CONVERT] Struttura: PAT + PMT + {
-                len(ts_packets) -
-                5} video + PCR",
-            "DEBUG",
-            "proxy_ts")
+            "proxy_ts"
+        )
 
-        # Verifica sync byte
+        enhanced_log(
+            "📊 [FMP4_CONVERT] Structure: PAT + PMT + %d video + PCR" % (
+                len(ts_packets) - 5
+            ),
+            "DEBUG",
+            "proxy_ts"
+        )
+        # Verify sync byte
         if ts_stream and ts_stream[0] == 0x47:
             enhanced_log(
-                "✅ [FMP4_CONVERT] Stream TS valido (sync byte 0x47)",
+                "✅ [FMP4_CONVERT] Valid TS stream (sync byte 0x47)",
                 "DEBUG",
-                "proxy_ts")
+                "proxy_ts"
+            )
         else:
             enhanced_log(
-                "❌ [FMP4_CONVERT] ERRORE: Stream TS non valido!",
+                "❌ [FMP4_CONVERT] ERROR: Invalid TS stream!",
                 "ERROR",
-                "proxy_ts")
+                "proxy_ts"
+            )
 
         enhanced_log(
-            f"✅ [FMP4_CONVERT] Conversione completata: {
-                len(ts_stream)} bytes TS",
+            "✅ [FMP4_CONVERT] Conversion completed: %d TS bytes" % len(ts_stream),
             "INFO",
-            "proxy_ts")
+            "proxy_ts"
+        )
 
         return ts_stream
 
@@ -417,7 +424,7 @@ def convert_fmp4_to_ts(fmp4_content, stream_id=None):
             f"❌ [FMP4_CONVERT] Errore conversione: {e}",
             "ERROR",
             "proxy_ts")
-        # ✅ FALLBACK MIGLIORATO: Stream TS completo e valido per Enigma2
+        # Stream TS completo e valido per Enigma2
         try:
             # PAT completo
             pat = bytes([0x47,
@@ -514,17 +521,21 @@ def convert_fmp4_to_ts(fmp4_content, stream_id=None):
                     len(fallback_ts)} bytes", "INFO", "proxy_ts")
             return fallback_ts
         except Exception as fallback_error:
-            # Fallback di emergenza
+            # Emergency fallback
             emergency_ts = b'\x47\x1F\xFF\x10' + b'\xFF' * 184
+
             enhanced_log(
-                f"[FMP4_CONVERT] Errore fallback TS completo: {fallback_error}",
+                "[FMP4_CONVERT] Complete TS fallback error: %s" % fallback_error,
                 "WARNING",
-                "proxy_ts")
+                "proxy_ts"
+            )
+
             enhanced_log(
-                f"🆘 [FMP4_CONVERT] Fallback di emergenza: {
-                    len(emergency_ts)} bytes",
+                "🆘 [FMP4_CONVERT] Emergency fallback: %d bytes" % len(emergency_ts),
                 "WARNING",
-                "proxy_ts")
+                "proxy_ts"
+            )
+
             return emergency_ts
 
 
@@ -814,7 +825,7 @@ try:
     from .extractor.dlhd_extractor import DLHDExtractor
     dlhd_extractor = DLHDExtractor()
     DLHD_AVAILABLE = True
-    # ✅ CRITICO: Salva riferimento alla sessione DLHD per usarla nel download chiavi AES
+    # Salva riferimento alla sessione DLHD per usarla nel download chiavi AES
     DLHD_SESSION = dlhd_extractor.session if hasattr(
         dlhd_extractor, 'session') else None
     enhanced_log("✅ DLHD extractor disponibile", "INFO", "AppCore")
@@ -1104,7 +1115,7 @@ def make_enigma2_request(url, headers=None, timeout=None, **kwargs):
     timeout = timeout or REQUEST_TIMEOUT
     retry_codes = [429, 500, 502, 503, 504]
 
-    # ✅ OTTIMIZZAZIONE: Per Freeshot, usa timeout più aggressivi
+    # Per Freeshot, usa timeout più aggressivi
     is_freeshot_url = 'lovecdn.ru' in url.lower()
     if is_freeshot_url:
         timeout = min(timeout, 4)  # Max 4 secondi per Freeshot
@@ -2053,7 +2064,7 @@ def refresh_freeshot_token(channel_name, old_token):
 
 def get_stream_id_from_url(url):
     """
-    ✅ SOLUZIONE CRITICA: Genera Stream ID deterministico per canale per evitare conflitti
+    Genera Stream ID deterministico per canale per evitare conflitti
 
     Il problema originale: ogni risoluzione genera UUID random → stream_id diversi
     per lo stesso canale → Enigma2 non trova la cache → visione interrotta
@@ -2067,7 +2078,7 @@ def get_stream_id_from_url(url):
         channel_match = re.search(r'[?&]id=(\d+)', url)
         if channel_match:
             channel_id = channel_match.group(1)
-            # ✅ CRITICO: Usa hash SHA256 troncato per unicità stabile
+            # Usa hash SHA256 troncato per unicità stabile
             stream_id = hashlib.sha256(
                 f"daddy_{channel_id}".encode()).hexdigest()[:12]
             enhanced_log(
@@ -2273,7 +2284,7 @@ def proxy_m3u(request=None, **kwargs):
             "DEBUG",
             "AppCore")
 
-        # ✅ SOLUZIONE CRITICA: Stream ID deterministico evita clearance accidentale
+        # Stream ID deterministico evita clearance accidentale
         current_stream_id = get_stream_id_from_url(m3u_url)
         is_vavoo_request = 'vavoo' in m3u_url.lower()
         if is_vavoo_request:
@@ -2324,7 +2335,7 @@ def proxy_m3u(request=None, **kwargs):
                 "INFO",
                 "AppCore")
         else:
-            # ✅ NUOVO: Se è lo stesso canale, riusa la cache ma aggiorna timestamp
+            # Se è lo stesso canale, riusa la cache ma aggiorna timestamp
             enhanced_log(
                 f"♻️  [CACHE_REUSE] Stesso canale (stream_id: {current_stream_id}), cache riutilizzata",
                 "INFO",
@@ -2436,7 +2447,7 @@ def proxy_m3u(request=None, **kwargs):
 
         final_url = result.get("resolved_url")
 
-        # ✅ CORREZIONE: Rileva automaticamente segmenti DLHD mascherati DOPO aver ottenuto final_url
+        # Rileva automaticamente segmenti DLHD mascherati DOPO aver ottenuto final_url
         is_dlhd_domain = final_url and is_daddy_domain(final_url)
         dlhd_masked = kwargs.get(
             'dlhd_masked',
@@ -2446,7 +2457,7 @@ def proxy_m3u(request=None, **kwargs):
             "INFO",
             "AppCore")
 
-        # ✅ CORREZIONE CRITICA: Inizializza m3u_content prima dell'uso
+        # ✅ Inizializza m3u_content prima dell'uso
         m3u_content = result.get("m3u8_content", "")
         current_headers_for_proxy = result.get("headers", {}).copy()
         # Nei passthrough VIX il resolver puo' ricreare gli header base e perdere
@@ -2473,7 +2484,7 @@ def proxy_m3u(request=None, **kwargs):
 
         # Se il resolver (es. Vix) non ha già fornito il contenuto, scaricalo
         if not m3u_content:
-            # ✅ OTTIMIZZAZIONE: Timeout ridotti per Enigma2
+            # Timeout ridotti per Enigma2
             timeout_to_use = 6 if 'kiko2.ru' in final_url else get_dynamic_timeout(
                 final_url)
             enhanced_log(
@@ -2610,7 +2621,7 @@ def proxy_m3u(request=None, **kwargs):
             current_headers_for_proxy,
             result)
 
-        # ✅ CORREZIONE: Salva sempre le informazioni base dello stream anche senza chiave AES
+        # Salva sempre le informazioni base dello stream anche senza chiave AES
         if stream_id not in STREAM_KEY_INFO:
             STREAM_KEY_INFO[stream_id] = {
                 'headers': current_headers_for_proxy or {},
@@ -2674,7 +2685,7 @@ def proxy_m3u(request=None, **kwargs):
                         "INFO",
                         "AppCore")
 
-                    # ✅ CORREZIONE: Assicurati che STREAM_KEY_INFO esista
+                    # Assicurati che STREAM_KEY_INFO esista
                     if stream_id not in STREAM_KEY_INFO:
                         STREAM_KEY_INFO[stream_id] = {
                             'headers': current_headers_for_proxy or {},
@@ -2776,7 +2787,7 @@ def proxy_m3u(request=None, **kwargs):
                         "AppCore")
                     continue
 
-                # ✅ CORREZIONE CRITICA: Validazione migliorata per segmenti DLHD
+                # ✅ Validazione migliorata per segmenti DLHD
                 is_dlhd_domain = is_daddy_domain(
                     segment_url_lower) or dlhd_masked
 
@@ -2847,7 +2858,7 @@ def proxy_m3u(request=None, **kwargs):
                         f"🔗 [FMP4_DIRECT] URL proxy: {proxy_url[:100]}...", "DEBUG", "AppCore")
                 else:
                     # È un segmento TS (qualsiasi altra estensione, inclusi .html per DLHD), usa proxy/ts
-                    # ✅ CRITICO: stream_id DEVE essere nel query string per la decrittazione
+                    # stream_id DEVE essere nel query string per la decrittazione
                     if headers_query:
                         proxy_url = f"http://127.0.0.1:7860/proxy/ts?url={
                             quote(segment_url)}&stream_id={stream_id}&{headers_query}"
@@ -2882,7 +2893,7 @@ def proxy_m3u(request=None, **kwargs):
                     key_inserted = True
             modified_m3u8 = final_lines
 
-        # ✅ CORREZIONE CRITICA: Se M3U8 è vuoto, prova URL alternativo .m3u8
+        # ✅ Se M3U8 è vuoto, prova URL alternativo .m3u8
         segment_lines = [line for line in modified_m3u8 if line and not line.startswith(
             '#') and line.strip()]
         if len(segment_lines) == 0:
@@ -3291,7 +3302,7 @@ def proxy_ts(request=None, **kwargs):
         "DEBUG",
         "proxy_ts")
 
-    # ✅ OTTIMIZZAZIONE: Timeout ridotti per segmenti
+    # Timeout ridotti per segmenti
     if stream_id in STREAM_KEY_INFO:
         saved_headers = STREAM_KEY_INFO[stream_id].get('headers', {}) or {}
         merged_headers = saved_headers.copy()
@@ -3310,7 +3321,7 @@ def proxy_ts(request=None, **kwargs):
             "INFO",
             "proxy_ts")
 
-        # ✅ CORREZIONE CRITICA: Usa sessione persistente DLHD se disponibile
+        # ✅ Usa sessione persistente DLHD se disponibile
         dlhd_session = get_dlhd_session()
         if dlhd_session and any(domain in ts_url.lower()
                                 for domain in ['kiko2.ru', 'giokko.ru']):
@@ -3490,7 +3501,7 @@ def proxy_ts(request=None, **kwargs):
                 "INFO",
                 "proxy_ts")
 
-            # ✅ CORREZIONE CRITICA: Chiama sempre decrypt_ts_if_needed
+            # ✅ Chiama sempre decrypt_ts_if_needed
             decrypted = decrypt_ts_if_needed(
                 ts_content, stream_id, headers, ts_url)
             if decrypted != ts_content:
@@ -3626,7 +3637,7 @@ AES_KEY_CACHE = {}
 STREAM_KEY_INFO = {}  # Memorizza info chiavi per stream
 # NUOVO: Cache per gli header associati a uno stream
 STREAM_HEADER_INFO = {}
-# ✅ NUOVO: Cache per segmenti non disponibili (evita richieste ripetute)
+# Cache per segmenti non disponibili (evita richieste ripetute)
 FAILED_SEGMENTS_CACHE = {}
 
 
@@ -3636,7 +3647,7 @@ def cleanup_expired_segments():
     current_time = time.time()
     expired_keys = []
 
-    # ✅ OTTIMIZZAZIONE: Cache molto breve (3s) per retry più frequenti
+    # Cache molto breve (3s) per retry più frequenti
     for key, entry in FAILED_SEGMENTS_CACHE.items():
         if current_time - entry['timestamp'] > 3:  # Scaduti dopo 3 secondi
             expired_keys.append(key)
@@ -3655,7 +3666,7 @@ def cleanup_expired_segments():
                 del stream_info['init_timestamp']
                 old_init_count += 1
 
-    # ✅ NUOVO: Pulisci anche chiavi AES molto vecchie (oltre 5 minuti)
+    # Pulisci anche chiavi AES molto vecchie (oltre 5 minuti)
     old_aes_keys = []
     for key in list(AES_KEY_CACHE.keys()):
         # Le chiavi AES non hanno timestamp, ma possiamo pulire quelle non usate di recente
@@ -3896,7 +3907,7 @@ def extract_key_info_from_m3u8(
                             iv_bytes.hex()}", "WARNING", "AppCore")
                 iv_hex = iv_bytes.hex()
                 # PATCH: crea la entry PRIMA di qualsiasi assegnazione
-                # ✅ CRITICO: Salva anche gli headers per usarli nel download della chiave
+                # Salva anche gli headers per usarli nel download della chiave
                 STREAM_KEY_INFO[stream_id] = {
                     'key_uri': key_uri,
                     'iv': iv_bytes,
@@ -4039,7 +4050,7 @@ def get_aes_key_for_stream(stream_id, headers, segment_url=None):
                         'Origin': stream_headers.get('Origin', '')
                     }
 
-                    # ✅ CORREZIONE CRITICA: Usa sessione persistente DLHD se disponibile
+                    # ✅ Usa sessione persistente DLHD se disponibile
                     dlhd_session = get_dlhd_session()
                     if dlhd_session:
                         enhanced_log(
@@ -4088,11 +4099,11 @@ def get_aes_key_for_stream(stream_id, headers, segment_url=None):
             "DEBUG",
             "AppCore")
 
-        # ✅ OTTIMIZZAZIONE: Timeout ridotti per Enigma2
+        # Timeout ridotti per Enigma2
         timeout = 5 if 'kiko2.ru' in key_uri else 8
         enhanced_log(f"⏰ [NEW_KEY] Timeout: {timeout}s", "DEBUG", "AppCore")
 
-        # ✅ CORREZIONE CRITICA: Usa sessione persistente DLHD per mantenere cookie auth
+        # Usa sessione persistente DLHD per mantenere cookie auth
         dlhd_session = get_dlhd_session()
         if dlhd_session and 'kiko2.ru' in key_uri:
             enhanced_log(
@@ -4125,7 +4136,7 @@ def get_aes_key_for_stream(stream_id, headers, segment_url=None):
                 "ERROR",
                 "AppCore")
 
-            # ✅ NUOVO: Se fallisce, prova a invalidare cache DLHD per forzare refresh
+            # Se fallisce, prova a invalidare cache DLHD per forzare refresh
             if DLHD_AVAILABLE and dlhd_extractor and response.status_code in [
                     403, 404]:
                 try:
@@ -4142,49 +4153,57 @@ def get_aes_key_for_stream(stream_id, headers, segment_url=None):
             return None
 
         aes_key = response.content
+
         enhanced_log(
-            f"🔑 [NEW_KEY] Chiave scaricata: {
-                len(aes_key)} bytes",
+            "🔑 [NEW_KEY] Key downloaded: %d bytes" % len(aes_key),
             "INFO",
-            "AppCore")
+            "AppCore"
+        )
 
         if len(aes_key) == 16:
             AES_KEY_CACHE[cache_key] = aes_key
             key_info['last_heartbeat'] = time.time()
             key_info['last_key_uri'] = key_uri
+
             enhanced_log(
-                f"✅ [NEW_KEY] === NUOVA CHIAVE AES SALVATA ({
-                    len(aes_key)} bytes) ===", "INFO", "AppCore")
+                "✅ [NEW_KEY] === NEW AES KEY SAVED (%d bytes) ===" % len(aes_key),
+                "INFO",
+                "AppCore"
+            )
+
             return aes_key
         else:
             enhanced_log(
-                f"❌ [NEW_KEY] Chiave AES dimensione invalida: {
-                    len(aes_key)} bytes (attesi 16)",
+                "❌ [NEW_KEY] Invalid AES key size: %d bytes (expected 16)" % len(aes_key),
                 "ERROR",
-                "AppCore")
+                "AppCore"
+            )
 
         return None
 
-    except Exception as e:
-        enhanced_log(
-            f"❌ [NEW_KEY] === ERRORE DOWNLOAD CHIAVE AES: {
-                type(e).__name__}: {
-                str(e)} ===",
-            "ERROR",
-            "AppCore")
-        import traceback
-        enhanced_log(
-            f"🔍 [NEW_KEY] Stack trace: {
-                traceback.format_exc()}",
-            "ERROR",
-            "AppCore")
-        return None
+        except Exception as e:
+            enhanced_log(
+                "❌ [NEW_KEY] === AES KEY DOWNLOAD ERROR: %s: %s ===" % (
+                    type(e).__name__,
+                    str(e)
+                ),
+                "ERROR",
+                "AppCore"
+            )
+
+            import traceback
+
+            enhanced_log(
+                "🔍 [NEW_KEY] Stack trace: %s" % traceback.format_exc(),
+                "ERROR",
+                "AppCore"
+            )
+
+            return None
 
 
-# Sostituisci la funzione decrypt_ts_segment (riga ~1062) con questa
-# versione corretta:
 def decrypt_ts_segment(ts_content, aes_key, stream_id):
-    """Decrittazione AES-128 con fallback per Enigma2"""
+    """AES-128 decryption with Enigma2 fallback support"""
     if not AES_AVAILABLE or not aes_key:
         return ts_content
 
@@ -4204,8 +4223,10 @@ def decrypt_ts_segment(ts_content, aes_key, stream_id):
                     if all(c in '0123456789abcdefABCDEF' for c in iv_str):
                         iv = bytes.fromhex(iv_str)
                         enhanced_log(
-                            f"🔢 [IV] Convertito da hex: {
-                                iv.hex()}", "DEBUG", "proxy_ts")
+                            "🔢 [IV] Converted from hex: %s" % iv.hex(),
+                            "DEBUG",
+                            "proxy_ts"
+                        )
                     else:
                         # Se non è esadecimale valido, usa come stringa ASCII
                         iv = iv_str.encode('latin-1')
@@ -4214,9 +4235,11 @@ def decrypt_ts_segment(ts_content, aes_key, stream_id):
                                 iv.hex()}", "DEBUG", "proxy_ts")
                 except Exception as e:
                     enhanced_log(
-                        f"⚠️ [IV] Errore conversione IV: {e}",
+                    enhanced_log(
+                        "⚠️ [IV] IV conversion error: %s" % e,
                         "WARNING",
-                        "proxy_ts")
+                        "proxy_ts"
+                    )
                     iv = None
 
             # Assicurati che l'IV sia esattamente 16 byte
@@ -4225,41 +4248,51 @@ def decrypt_ts_segment(ts_content, aes_key, stream_id):
                     # Se è troppo corto, aggiungi zeri alla fine
                     iv = iv + (b'\x00' * (16 - len(iv)))
                     enhanced_log(
-                        f"⚠️ [IV] IV troppo corto, allungato: {
-                            iv.hex()}", "WARNING", "proxy_ts")
+                        "⚠️ [IV] IV too short, padded: %s" % iv.hex(),
+                        "WARNING",
+                        "proxy_ts"
+                    )
                 elif len(iv) > 16:
                     # Se è troppo lungo, prendi i primi 16 byte
                     iv = iv[:16]
                     enhanced_log(
-                        f"⚠️ [IV] IV troppo lungo, troncato: {
-                            iv.hex()}", "WARNING", "proxy_ts")
+                        "⚠️ [IV] IV too long, truncated: %s" % iv.hex(),
+                        "WARNING",
+                        "proxy_ts"
+                    )
 
         # Se non abbiamo un IV valido, usiamo uno di default
         if iv is None or len(iv) != 16:
             iv = b'\x00' * 16
-            enhanced_log("⚠️ [IV] Usando IV di default", "WARNING", "proxy_ts")
-
+            enhanced_log(
+                "⚠️ [IV] Using default IV",
+                "WARNING",
+                "proxy_ts"
+            )
         # Salva l'IV corretto per i prossimi utilizzi
         if stream_id in STREAM_KEY_INFO:
             STREAM_KEY_INFO[stream_id]['iv'] = iv
 
         enhanced_log(
-            f"🔢 [IV] IV finale per decifratura: {
-                iv.hex()}", "DEBUG", "proxy_ts")
+            "🔢 [IV] Final IV for decryption: %s" % iv.hex(),
+            "DEBUG",
+            "proxy_ts"
+        )
 
         # Log IV e chiave per debug
         is_daddy = STREAM_KEY_INFO.get(stream_id, {}).get('is_daddy', False)
         if is_daddy:
             enhanced_log(
-                f"🔐 [DECRYPT] IV (hex): {
-                    iv.hex()}",
+                "🔐 [DECRYPT] IV (hex): %s" % iv.hex(),
                 "DEBUG",
-                "AppCore")
+                "AppCore"
+            )
+
             enhanced_log(
-                f"🔐 [DECRYPT] Chiave (hex): {
-                    aes_key.hex()}",
+                "🔐 [DECRYPT] Key (hex): %s" % aes_key.hex(),
                 "DEBUG",
-                "AppCore")
+                "AppCore"
+            )
 
         # Decrittazione con libreria disponibile
         try:
@@ -4309,9 +4342,10 @@ def decrypt_ts_segment(ts_content, aes_key, stream_id):
 
         except Exception as decrypt_error:
             enhanced_log(
-                f"❌ Errore durante la decrittazione: {decrypt_error}",
+                "❌ Decryption error: %s" % e,
                 "ERROR",
-                "proxy_ts")
+                "proxy_ts"
+            )
             return ts_content
     except Exception as e:
         enhanced_log(f"❌ Errore decrittazione: {e}", "ERROR", "proxy_ts")
@@ -4319,60 +4353,93 @@ def decrypt_ts_segment(ts_content, aes_key, stream_id):
 
 
 def create_robust_session():
-    """Crea sessione ottimizzata per Enigma2 con retry integrato e cookie jar"""
-    session = requests.Session()
-    # ✅ CRITICO: Non sovrascrivere User-Agent di default, lascia che venga impostato per richiesta
-    session.headers.update({
-        'Connection': 'close'  # Importante per decoder
-    })
-    # ✅ CRITICO: Abilita cookie jar automatico (già abilitato di default in requests.Session)
-    # session.cookies è già un CookieJar, non serve fare nulla
+    """Create an optimized session for Enigma2 with built-in retry support and cookie handling"""
 
-    # Monkey patch per retry automatico
+    session = requests.Session()
+
+    # Do not override the default User-Agent;
+    # let it be defined per request.
+    session.headers.update({
+        'Connection': 'close'  # Important for Enigma2 receivers
+    })
+
+    # Automatic cookie handling is already enabled by default in requests.Session.
+    # session.cookies is already a CookieJar instance.
+
+    # Monkey patch for automatic retries
     original_request = session.request
 
     def request_with_retry(method, url, **kwargs):
         retry_codes = [429, 500, 502, 503, 504]
+
         for attempt in range(3):
             try:
                 response = original_request(method, url, **kwargs)
+
                 if response.status_code not in retry_codes:
                     return response
+
                 if attempt < 2:
                     time.sleep(1 * (attempt + 1))
-            except (requests.exceptions.Timeout, requests.exceptions.ConnectionError):
+
+            except (
+                requests.exceptions.Timeout,
+                requests.exceptions.ConnectionError
+            ):
                 if attempt < 2:
                     time.sleep(1 * (attempt + 1))
                     continue
+
                 raise
+
         return response
 
     session.request = request_with_retry
+
     return session
 
 
 def get_persistent_session(proxy_url=None):
-    """Ottiene una sessione persistente dal pool o ne crea una nuova"""
+    """Get a persistent session from the pool or create a new one"""
     global SESSION_POOL, SESSION_LOCK
 
-    # Usa proxy_url come chiave, o 'default' se non c'è proxy
+    # Use proxy_url as the key, or 'default' if no proxy is provided
     pool_key = proxy_url if proxy_url else 'default'
     current_time = time.time()
 
     with SESSION_LOCK:
         session = SESSION_POOL.get(pool_key)
+
         if session is not None:
-            session_age = current_time - \
-                getattr(session, "_sp_created_at", current_time)
-            requests_count = getattr(session, "_sp_requests_count", 0)
-            if session_age > SESSION_MAX_AGE or requests_count >= SESSION_MAX_REQUESTS:
+            session_age = current_time - getattr(
+                session,
+                "_sp_created_at",
+                current_time
+            )
+
+            requests_count = getattr(
+                session,
+                "_sp_requests_count",
+                0
+            )
+
+            if (
+                session_age > SESSION_MAX_AGE or
+                requests_count >= SESSION_MAX_REQUESTS
+            ):
                 try:
                     session.close()
+
                 except Exception as close_error:
                     enhanced_log(
-                        f"Errore chiusura sessione scaduta {pool_key}: {close_error}",
+                        "Error closing expired session %s: %s" % (
+                            pool_key,
+                            close_error
+                        ),
                         "DEBUG",
-                        "AppCore")
+                        "AppCore"
+                    )
+
                 del SESSION_POOL[pool_key]
                 session = None
 
@@ -4381,25 +4448,38 @@ def get_persistent_session(proxy_url=None):
 
             if session is None:
                 enhanced_log(
-                    f"Impossibile creare sessione per: {pool_key}",
+                    "Unable to create session for: %s" % pool_key,
                     "get_persistent_session",
-                    "AppCore")
+                    "AppCore"
+                )
                 return None
 
-            # Configura proxy se fornito
+            # Configure proxy if provided
             if proxy_url:
-                session.proxies.update({'http': proxy_url, 'https': proxy_url})
+                session.proxies.update({
+                    'http': proxy_url,
+                    'https': proxy_url
+                })
 
             session._sp_created_at = current_time
             session._sp_requests_count = 0
-            SESSION_POOL[pool_key] = session
-            enhanced_log(
-                f"Nuova sessione persistente creata per: {pool_key}",
-                "get_persistent_session",
-                "AppCore")
 
-        SESSION_POOL[pool_key]._sp_requests_count = getattr(
-            SESSION_POOL[pool_key], "_sp_requests_count", 0) + 1
+            SESSION_POOL[pool_key] = session
+
+            enhanced_log(
+                "New persistent session created for: %s" % pool_key,
+                "get_persistent_session",
+                "AppCore"
+            )
+
+        SESSION_POOL[pool_key]._sp_requests_count = (
+            getattr(
+                SESSION_POOL[pool_key],
+                "_sp_requests_count",
+                0
+            ) + 1
+        )
+
         return SESSION_POOL[pool_key]
 
 
@@ -4409,58 +4489,83 @@ def make_persistent_request(
         timeout=None,
         proxy_url=None,
         **kwargs):
-    """Richiesta HTTP ottimizzata per Enigma2 con sessione DLHD persistente"""
+    """Optimized HTTP request for Enigma2 with persistent DLHD session"""
     from html import unescape as html_unescape
-    url = html_unescape(url)
-    enhanced_log(
-        f"🌐 [PERSISTENT_REQUEST] URL: {url[:100]}...", "DEBUG", "AppCore")
 
-    # ✅ CORREZIONE CRITICA: Usa sessione DLHD persistente per domini kiko2.ru
+    url = html_unescape(url)
+
+    enhanced_log(
+        "🌐 [PERSISTENT_REQUEST] URL: %s..." % url[:100],
+        "DEBUG",
+        "AppCore"
+    )
+
+    # Use persistent DLHD session for kiko2.ru domains
     dlhd_session = get_dlhd_session()
-    if dlhd_session and any(domain in url.lower()
-                            for domain in ['kiko2.ru', 'giokko.ru']):
+
+    if dlhd_session and any(
+            domain in url.lower()
+            for domain in ['kiko2.ru', 'giokko.ru']):
+
         enhanced_log(
-            f"🍪 [DLHD_SESSION] Usando sessione persistente DLHD",
+            "🍪 [DLHD_SESSION] Using persistent DLHD session",
             "DEBUG",
-            "AppCore")
+            "AppCore"
+        )
+
         try:
             response = dlhd_session.get(
                 url,
                 headers=headers,
                 timeout=timeout or REQUEST_TIMEOUT,
                 verify=False,
-                **kwargs)
-            enhanced_log(
-                f"✅ [DLHD_SESSION] Risposta: {
-                    response.status_code}",
-                "DEBUG",
-                "AppCore")
-            return response
-        except Exception as e:
-            enhanced_log(f"❌ [DLHD_SESSION] Errore: {e}", "WARNING", "AppCore")
-            # Fallback al metodo standard
+                **kwargs
+            )
 
-    # Metodo standard per altri domini
+            enhanced_log(
+                "✅ [DLHD_SESSION] Response: %s" % response.status_code,
+                "DEBUG",
+                "AppCore"
+            )
+
+            return response
+
+        except Exception as e:
+            enhanced_log(
+                "❌ [DLHD_SESSION] Error: %s" % e,
+                "WARNING",
+                "AppCore"
+            )
+            # Fallback to standard method
+
+    # Standard method for other domains
     request_headers = headers.copy() if headers else {}
+
     for header_name in list(request_headers.keys()):
         if header_name.lower().startswith("x-easyproxy-"):
             request_headers.pop(header_name, None)
+
     final_timeout = timeout or REQUEST_TIMEOUT
 
     response = None
+
     for attempt in range(3):
         try:
             session = get_persistent_session(proxy_url)
+
             if session is None:
                 enhanced_log(
-                    "❌ Impossibile ottenere sessione persistente",
+                    "❌ Unable to obtain persistent session",
                     "ERROR",
-                    "AppCore")
-                raise Exception("Impossibile ottenere sessione persistente")
+                    "AppCore"
+                )
+                raise Exception("Unable to obtain persistent session")
 
             enhanced_log(
-                f"🔄 [PERSISTENT_REQUEST] Tentativo {
-                    attempt + 1}/3", "DEBUG", "AppCore")
+                "🔄 [PERSISTENT_REQUEST] Attempt %d/3" % (attempt + 1),
+                "DEBUG",
+                "AppCore"
+            )
 
             if request_headers:
                 response = session.get(
@@ -4468,18 +4573,24 @@ def make_persistent_request(
                     headers=request_headers,
                     timeout=final_timeout,
                     verify=VERIFY_SSL,
-                    **kwargs)
+                    **kwargs
+                )
             else:
                 response = session.get(
-                    url, timeout=final_timeout, verify=VERIFY_SSL, **kwargs)
+                    url,
+                    timeout=final_timeout,
+                    verify=VERIFY_SSL,
+                    **kwargs
+                )
 
             enhanced_log(
-                f"✅ [PERSISTENT_REQUEST] Risposta: {
-                    response.status_code}",
+                "✅ [PERSISTENT_REQUEST] Response: %s" % response.status_code,
                 "DEBUG",
-                "AppCore")
+                "AppCore"
+            )
 
             retry_codes = [418, 429, 500, 502, 503, 504]
+
             if response.status_code not in retry_codes:
                 return response
 
@@ -4487,24 +4598,35 @@ def make_persistent_request(
                 time.sleep(0.5 * (attempt + 1))
                 continue
 
-        except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as e:
+        except (
+            requests.exceptions.Timeout,
+            requests.exceptions.ConnectionError
+        ) as e:
+
             enhanced_log(
-                f"❌ [PERSISTENT_REQUEST] Errore connessione tentativo {
-                    attempt + 1}: {e}", "ERROR", "AppCore")
+                "❌ [PERSISTENT_REQUEST] Connection error on attempt %d: %s"
+                % (attempt + 1, e),
+                "ERROR",
+                "AppCore"
+            )
+
             with SESSION_LOCK:
                 pool_key = proxy_url if proxy_url else 'default'
+
                 if pool_key in SESSION_POOL:
                     del SESSION_POOL[pool_key]
+
             if attempt < 2:
                 time.sleep(0.5 * (attempt + 1))
                 continue
-            else:
-                raise
+            raise
+
         except Exception as e:
             enhanced_log(
-                f"❌ [PERSISTENT_REQUEST] Errore generico: {e}",
+                "❌ [PERSISTENT_REQUEST] Generic error: %s" % e,
                 "ERROR",
-                "AppCore")
+                "AppCore"
+            )
             raise
 
     return response
@@ -4513,19 +4635,25 @@ def make_persistent_request(
 # Proxy KEY SENZA CACHE
 @route_registry.route('/proxy/key')
 def proxy_key(request=None, **kwargs):
-    """Proxy KEY per chiavi AES-128 DLHD"""
+    """AES-128 KEY proxy for DLHD keys"""
     enhanced_log("🔑 Proxy Key", "INFO", "AppCore")
 
     key_url = kwargs.get('url', '').strip()
+
     if not key_url:
-        enhanced_log("❌ [PROXY_KEY] URL chiave mancante", "ERROR", "AppCore")
+        enhanced_log(
+            "❌ [PROXY_KEY] Missing key URL",
+            "ERROR",
+            "AppCore"
+        )
+
         return {
-            'content': b"Errore: URL chiave mancante",
+            'content': b"Error: Missing key URL",
             'status': 400,
             'content_type': 'text/plain'
         }
 
-    # Estrai headers custom
+    # Extract custom headers
     headers = {
         unquote(key[2:]).replace("_", "-"): unquote(value).strip()
         for key, value in kwargs.items()
@@ -4534,49 +4662,71 @@ def proxy_key(request=None, **kwargs):
 
     try:
         enhanced_log(
-            f"🔑 [PROXY_KEY] Scarico chiave: {key_url[-30:]}", "INFO", "AppCore")
+            "🔑 [PROXY_KEY] Downloading key: %s" % key_url[-30:],
+            "INFO",
+            "AppCore"
+        )
 
-        # Usa sessione DLHD persistente se disponibile
+        # Use persistent DLHD session if available
         dlhd_session = get_dlhd_session()
+
         if dlhd_session and 'kiko2.ru' in key_url:
             enhanced_log(
-                f"🍪 [PROXY_KEY] Usando sessione persistente DLHD",
+                "🍪 [PROXY_KEY] Using persistent DLHD session",
                 "DEBUG",
-                "AppCore")
+                "AppCore"
+            )
+
             response = dlhd_session.get(
-                key_url, headers=headers, timeout=8, verify=False)
+                key_url,
+                headers=headers,
+                timeout=8,
+                verify=False
+            )
         else:
             response = make_persistent_request(
-                key_url, headers=headers, timeout=8)
+                key_url,
+                headers=headers,
+                timeout=8
+            )
 
         response.raise_for_status()
         key_content = response.content
 
         if len(key_content) == 16:
             enhanced_log(
-                f"✅ [PROXY_KEY] Chiave AES scaricata: {
-                    len(key_content)} bytes",
+                "✅ [PROXY_KEY] AES key downloaded: %d bytes" % len(key_content),
                 "INFO",
-                "AppCore")
+                "AppCore"
+            )
+
             return {
                 'content': key_content,
                 'status': 200,
                 'content_type': 'application/octet-stream'
             }
-        else:
-            enhanced_log(
-                f"❌ [PROXY_KEY] Chiave dimensione invalida: {
-                    len(key_content)} bytes", "ERROR", "AppCore")
-            return {
-                'content': b"Errore: Chiave AES invalida",
-                'status': 500,
-                'content_type': 'text/plain'
-            }
+
+        enhanced_log(
+            "❌ [PROXY_KEY] Invalid key size: %d bytes" % len(key_content),
+            "ERROR",
+            "AppCore"
+        )
+
+        return {
+            'content': b"Error: Invalid AES key",
+            'status': 500,
+            'content_type': 'text/plain'
+        }
 
     except Exception as e:
-        enhanced_log(f"❌ [PROXY_KEY] Errore: {e}", "ERROR", "AppCore")
+        enhanced_log(
+            "❌ [PROXY_KEY] Error: %s" % e,
+            "ERROR",
+            "AppCore"
+        )
+
         return {
-            'content': f"Errore chiave: {str(e)}".encode(),
+            'content': ("Key error: %s" % str(e)).encode(),
             'status': 500,
             'content_type': 'text/plain'
         }
@@ -4632,9 +4782,9 @@ class ConfigManager:
 
     def load_config(self):
         """
-        Carica la configurazione per Enigma2 in modo ottimizzato.
-        Cerca un file JSON in percorsi predefiniti e popola la configurazione
-        e le liste di proxy globali.
+        Load the Enigma2 configuration in an optimized way.
+        Search for a JSON configuration file in predefined locations and
+        populate the configuration and global proxy lists.
         """
         global PROXY_LIST, DADDY_PROXY_LIST
 
@@ -4644,72 +4794,103 @@ class ConfigManager:
             '/usr/lib/enigma2/python/Plugins/Extensions/StreamProxy/SPconfig.txt',
             '/usr/lib/enigma2/python/Plugins/Extensions/StreamProxy/streamproxy_config.json',
             'SPconfig.txt',
-            self.config_file]
+            self.config_file
+        ]
 
         loaded_path = None
+
         for path in config_paths:
             if os.path.exists(path):
                 try:
                     with open(path, 'r', encoding='utf-8') as f:
                         file_config = json.load(f)
+
                         for key, value in file_config.items():
-                            if key not in config or config.get(
-                                    key) in ('', None):
+                            if key not in config or config.get(key) in ('', None):
                                 config[key] = value
+
                     loaded_path = path
-                    # enhanced_log(f"✅ Configurazione caricata da: {loaded_path}", "load_config", "AppCore")
+
+                    # enhanced_log(
+                    #     "✅ Configuration loaded from: %s" % loaded_path,
+                    #     "load_config",
+                    #     "AppCore"
+                    # )
+
                 except (IOError, json.JSONDecodeError) as e:
                     enhanced_log(
-                        f"⚠️ Errore nel caricamento di {path}: {e}",
+                        "⚠️ Error loading %s: %s" % (path, e),
                         "load_config",
-                        "AppCore")
+                        "AppCore"
+                    )
 
         if not loaded_path:
             enhanced_log(
-                "ℹ️ Nessun file di configurazione trovato. Uso i valori di default.",
+                "ℹ️ No configuration file found. Using default values.",
                 "load_config",
-                "AppCore")
+                "AppCore"
+            )
 
         proxy_str = config.get('PROXY', '')
-        PROXY_LIST = [_normalize_proxy_url(p) for p in proxy_str.split(
-            ',') if p.strip()] if proxy_str else []
+
+        PROXY_LIST = [
+            _normalize_proxy_url(p)
+            for p in proxy_str.split(',')
+            if p.strip()
+        ] if proxy_str else []
+
         if PROXY_LIST:
             enhanced_log(
-                f"ℹ️ Proxy generali configurati: {
-                    len(PROXY_LIST)}",
+                "ℹ️ Configured general proxies: %d" % len(PROXY_LIST),
                 "load_config",
-                "AppCore")
+                "AppCore"
+            )
 
         daddy_proxy_str = config.get('DADDY_PROXY', '')
-        DADDY_PROXY_LIST = [_normalize_proxy_url(p) for p in daddy_proxy_str.split(
-            ',') if p.strip()] if daddy_proxy_str else []
+
+        DADDY_PROXY_LIST = [
+            _normalize_proxy_url(p)
+            for p in daddy_proxy_str.split(',')
+            if p.strip()
+        ] if daddy_proxy_str else []
+
         if DADDY_PROXY_LIST:
             enhanced_log(
-                f"ℹ️ Proxy DaddyLive configurati: {
-                    len(DADDY_PROXY_LIST)}",
+                "ℹ️ Configured DaddyLive proxies: %d" % len(DADDY_PROXY_LIST),
                 "load_config",
-                "AppCore")
+                "AppCore"
+            )
 
         return config
 
     def save_config(self, config):
-        """Salva la configurazione nel file JSON nel percorso di default."""
+        """Save configuration to the JSON file in the default path."""
         path_to_save = self.config_file
+
         try:
             with open(path_to_save, 'w', encoding='utf-8') as f:
                 config_to_save = {
-                    k: config.get(k) for k in self.default_config.keys() if k in config}
+                    k: config.get(k)
+                    for k in self.default_config.keys()
+                    if k in config
+                }
                 json.dump(config_to_save, f, indent=4)
+
             enhanced_log(
-                f"✅ Configurazione salvata in: {path_to_save}",
+                "✅ Configuration saved to: %s" % path_to_save,
                 "save_config",
-                "AppCore")
+                "AppCore"
+            )
+
             return True
+
         except IOError as e:
             enhanced_log(
-                f"❌ Errore nel salvataggio della configurazione: {e}",
+                "❌ Error saving configuration: %s" % e,
                 "save_config",
-                "AppCore")
+                "AppCore"
+            )
+
             return False
 
     def apply_config_to_app(self, config):
@@ -4718,32 +4899,38 @@ class ConfigManager:
         In un contesto Enigma2 puro, questa funzione potrebbe non essere utilizzata.
         """
         try:
-            # L'import di Flask è locale per evitare un requisito hard
             from flask import current_app
             if current_app:
                 for key, value in config.items():
                     current_app.config[key] = value
             return True
         except (ImportError, RuntimeError):
-            # Se Flask non è disponibile o non siamo in un contesto di app,
-            # ignora.
             return True
 
 
 config_manager = ConfigManager()
 
 
-# AppCore SEMPLIFICATO
 class AppCoreNoCache:
     def __init__(self):
-        enhanced_log("AppCore NoCache inizializzato", "INFO", "AppCore")
+        enhanced_log(
+            "AppCore NoCache initialized",
+            "INFO",
+            "AppCore"
+        )
 
     def handle_request(self, route_name, *args, **kwargs):
-        enhanced_log(f"📥 Richiesta: {route_name}", "INFO", "AppCore")
         enhanced_log(
-            f"🔍 [DEBUG] handle_request kwargs: {kwargs}",
+            "📥 Request: %s" % route_name,
+            "INFO",
+            "AppCore"
+        )
+
+        enhanced_log(
+            "🔍 [DEBUG] handle_request kwargs: %s" % kwargs,
             "DEBUG",
-            "AppCore")
+            "AppCore"
+        )
 
         if route_name not in route_registry.routes:
             return {
@@ -4751,26 +4938,28 @@ class AppCoreNoCache:
                 'status': 200,
                 'content_type': 'application/vnd.apple.mpegurl'
             }
-
-        # CORREZIONE CRITICA: Passa kwargs correttamente
+        # Pass kwargs correctly
         return route_registry.dispatch(route_name, **kwargs)
 
 
 # Callback per ServiceMonitor
 def service_monitor_callback(route_name, *args, **kwargs):
     enhanced_log(
-        f"🔄 ServiceMonitor → AppCore: {route_name}",
+        "🔄 ServiceMonitor → AppCore: %s" % route_name,
         "INFO",
-        "AppCore")
+        "AppCore"
+    )
+
     enhanced_log(
-        f"🔍 [DEBUG] Args ricevuti: args={args}, kwargs={kwargs}",
+        "🔍 [DEBUG] Received arguments: args=%s, kwargs=%s" % (args, kwargs),
         "DEBUG",
-        "AppCore")
+        "AppCore"
+    )
 
     try:
         app_core = AppCoreNoCache()
 
-        # CORREZIONE CRITICA: Debug e fix del passaggio parametri
+        # Debug e fix del passaggio parametri
         enhanced_log(
             f"🔍 [DEBUG] Prima di handle_request: kwargs={kwargs}",
             "DEBUG",

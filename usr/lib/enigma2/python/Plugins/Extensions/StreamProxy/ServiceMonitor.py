@@ -82,9 +82,6 @@ class StreamProxyServiceMonitor:
         self._hook_channelselection()
         enhanced_log("✅ ServiceMonitor inizializzato", "INFO")
 
-    # =========================
-    # Hook ChannelSelection
-    # =========================
     def _hook_channelselection(self):
         """Installa gli hook necessari per la gestione della lista canali."""
         if getattr(ChannelSelection, "_sp_patched", False):
@@ -257,9 +254,6 @@ class StreamProxyServiceMonitor:
         except Exception as e:
             enhanced_log(f"❌ Errore fix selezione canale: {e}", "ERROR")
 
-    # =========================
-    # Hook navigation
-    # =========================
     def _hook_navigation(self):
         nav = getattr(self.session, "nav", None)
         if not nav:
@@ -272,9 +266,6 @@ class StreamProxyServiceMonitor:
             nav.playService = self._interceptPlayService
             enhanced_log("🔗 Hook su playService installato", "INFO")
 
-    # =========================
-    # playService interception
-    # =========================
     def _interceptPlayService(
             self,
             ref,
@@ -291,383 +282,547 @@ class StreamProxyServiceMonitor:
                 f"🔍 [SERVICEMONITOR] Intercettato playService: {ref_str}",
                 "INFO")
 
-            # ✅ GESTIONE URL PROXY DA PLUGIN ESTERNI
+            # GESTIONE URL PROXY DA PLUGIN ESTERNI
             if self._is_proxy_ref_string(ref_str):
                 enhanced_log(
-                    "🔄 [SERVICEMONITOR] Rilevato servizio già proxy", "DEBUG")
+                    "🔄 [SERVICEMONITOR] Service already detected as proxied", "DEBUG"
+                )
 
-                # Estrai URL originale dal proxy se possibile
+                # Extract original URL from proxy if possible
                 original_url = self._extract_original_url_from_proxy(ref_str)
                 if original_url:
                     enhanced_log(
-                        f"🔍 [SERVICEMONITOR] URL originale estratto: {original_url[:100]}...", "DEBUG")
-                    # Salva riferimento per gestione UI
+                        "🔍 [SERVICEMONITOR] Extracted original URL: " + original_url[:100] + "...",
+                        "DEBUG"
+                    )
+                    # Save reference for UI handling
                     self.last_original_ref = ref
                     self.proxy_active = True
-                    # Salva info canale
+
+                    # Save channel info
                     parts = ref_str.split(":")
-                    channel_name = ":".join(parts[11:]) if len(
-                        parts) > 11 else "External Plugin Stream"
-                    self._save_channel_info(
-                        ref_str, original_url, channel_name)
+                    channel_name = ":".join(parts[11:]) if len(parts) > 11 else "External Plugin Stream"
+                    self._save_channel_info(ref_str, original_url, channel_name)
                 else:
                     enhanced_log(
-                        "⚠️ [SERVICEMONITOR] Proxy da plugin esterno senza URL originale",
-                        "WARNING")
+                        "⚠️ [SERVICEMONITOR] External plugin proxy without original URL",
+                        "WARNING"
+                    )
                     self.proxy_active = True
 
                 return self._call_orig_playService(
-                    ref, checkParentalControl, forceRestart)
+                    ref, checkParentalControl, forceRestart
+                )
 
             parts = ref_str.split(":")
             enhanced_log(
-                f"🔍 [SERVICEMONITOR] Parti servizio: {
-                    len(parts)} elementi", "DEBUG")
+                "🔍 [SERVICEMONITOR] Service parts: " + str(len(parts)) + " elements",
+                "DEBUG"
+            )
 
-            # ✅ Gestione riferimenti con #EXTVLCOPT
+            # Gestione riferimenti con #EXTVLCOPT
             url_part = ""
             channel_name = ""
 
             if len(parts) > 10:
                 url_part = parts[10]
-                # Se parte 10 contiene #EXTVLCOPT, cerca URL nelle parti
-                # successive
+                # If part 10 contains #EXTVLCOPT, look for URL in subsequent parts
                 if url_part.startswith("#EXTVLCOPT"):
                     enhanced_log(
-                        "🔍 [SERVICEMONITOR] Rilevato formato #EXTVLCOPT", "DEBUG")
-                    # Cerca URL nelle parti successive (potrebbe essere in 11,
-                    # 12, etc)
+                        "🔍 [SERVICEMONITOR] Detected #EXTVLCOPT format", "DEBUG"
+                    )
+
+                    # Search for URL in following parts (may be in 11, 12, etc.)
                     found_url = False
                     for i in range(11, len(parts)):
                         part = unquote(parts[i])
-                        # Verifica se la parte contiene un URL valido
-                        if part.startswith(
-                                "http://") or part.startswith("https://"):
+
+                        # Check if the part contains a valid URL
+                        if part.startswith("http://") or part.startswith("https://"):
                             url_part = parts[i]
-                            channel_name = ":".join(
-                                parts[i + 1:]) if i + 1 < len(parts) else ""
+                            channel_name = ":".join(parts[i + 1:]) if i + 1 < len(parts) else ""
                             found_url = True
+
                             enhanced_log(
-                                f"✅ [SERVICEMONITOR] URL trovato in parte {i}", "DEBUG")
+                                "✅ [SERVICEMONITOR] URL found at part " + str(i),
+                                "DEBUG"
+                            )
                             break
 
                     if not found_url:
-                        # ✅ Riferimento #EXTVLCOPT senza URL - IGNORA e passa oltre
+                        # #EXTVLCOPT reference without URL - IGNORE and continue
                         enhanced_log(
-                            "⚠️ [SERVICEMONITOR] Riferimento #EXTVLCOPT senza URL stream, ignorato",
-                            "WARNING")
+                            "⚠️ [SERVICEMONITOR] #EXTVLCOPT reference without stream URL, ignored",
+                            "WARNING"
+                        )
                         self._reset_proxy_state()
                         return self._call_orig_playService(
-                            ref, checkParentalControl, forceRestart, adjust)
+                            ref, checkParentalControl, forceRestart, adjust
+                        )
                 else:
-                    channel_name = ":".join(
-                        parts[11:]) if len(parts) > 11 else ""
+                    channel_name = ":".join(parts[11:]) if len(parts) > 11 else ""
 
             enhanced_log(
-                f"🔍 [SERVICEMONITOR] URL parte: {url_part[:150]}...", "DEBUG")
+                "🔍 [SERVICEMONITOR] URL part: " + url_part[:150] + "...",
+                "DEBUG"
+            )
+
             enhanced_log(
-                f"🔍 [SERVICEMONITOR] Nome canale: {channel_name}",
-                "DEBUG")
+                "🔍 [SERVICEMONITOR] Channel name: " + channel_name,
+                "DEBUG"
+            )
 
             if not url_part:
                 self._reset_proxy_state()
                 return self._call_orig_playService(
-                    ref, checkParentalControl, forceRestart, adjust)
+                    ref, checkParentalControl, forceRestart, adjust
+                )
 
             clean_url = unquote(url_part)
-            enhanced_log(
-                f"🔍 [SERVICEMONITOR] URL decodificato: {clean_url[:150]}...", "INFO")
 
-            # ✅ Verifica se è già un URL proxy (da plugin esterno) - GESTISCI HLS
+            enhanced_log(
+                "🔍 [SERVICEMONITOR] Decoded URL: " + clean_url[:150] + "...",
+                "INFO"
+            )
+
+            # Check if it's already a proxy URL (external plugin) - HANDLE HLS
             if self._is_already_proxy_url(clean_url):
                 enhanced_log(
-                    "✅ [SERVICEMONITOR] URL già proxy da plugin esterno", "INFO")
+                    "✅ [SERVICEMONITOR] URL already proxied by external plugin",
+                    "INFO"
+                )
 
-                # Estrai URL originale m3u8
-                original_url = self._extract_original_url_from_proxy_url(
-                    clean_url)
+                # Extract original m3u8 URL
+                original_url = self._extract_original_url_from_proxy_url(clean_url)
                 if original_url:
                     enhanced_log(
-                        f"🔍 [SERVICEMONITOR] URL m3u8 originale: {original_url[:100]}...", "DEBUG")
+                        "🔍 [SERVICEMONITOR] Original m3u8 URL: " + original_url[:100] + "...",
+                        "DEBUG"
+                    )
 
-                    # ✅ CREA NUOVO RIFERIMENTO CON URL M3U8 DIRETTO
-                    # Il proxy gestirà automaticamente i flussi HLS
+                    # CREATE NEW REFERENCE WITH DIRECT M3U8 URL
+                    # Proxy will automatically handle HLS streams
                     self.proxy_active = True
                     self.last_original_ref = ref
-                    self._save_channel_info(
-                        ref_str, original_url, channel_name)
 
-                    # Crea riferimento con URL m3u8 originale per gestione HLS
+                    self._save_channel_info(ref_str, original_url, channel_name)
+
+                    # Create reference with original m3u8 URL for HLS handling
                     prefix = ":".join(parts[0:10])
                     safe_name = channel_name or "External Plugin Stream"
-                    # Usa URL originale m3u8 - il proxy lo intercetterà
-                    new_service_str = f"{prefix}:{
-                        quote(original_url)}:{safe_name}"
+
+                    # Use original m3u8 URL - proxy will intercept it
+                    new_service_str = ":".join([
+                        prefix,
+                        quote(original_url),
+                        safe_name
+                    ])
+
                     m3u8_ref = eServiceReference(new_service_str)
 
                     enhanced_log(
-                        f"🎬 [SERVICEMONITOR] Creato riferimento m3u8 per gestione HLS", "INFO")
+                        "🎬 [SERVICEMONITOR] Created m3u8 reference for HLS handling",
+                        "INFO"
+                    )
+
                     return self._call_orig_playService(
-                        m3u8_ref, checkParentalControl, forceRestart, adjust)
+                        m3u8_ref,
+                        checkParentalControl,
+                        forceRestart,
+                        adjust
+                    )
                 else:
-                    # Fallback: passthrough se non riusciamo a estrarre URL
+                    # Fallback: passthrough if URL extraction fails
                     enhanced_log(
-                        "⚠️ [SERVICEMONITOR] Impossibile estrarre URL, passthrough",
-                        "WARNING")
+                        "⚠️ [SERVICEMONITOR] Unable to extract URL, passthrough",
+                        "WARNING"
+                    )
+
                     self.proxy_active = True
                     self.last_original_ref = ref
                     self._save_channel_info(ref_str, clean_url, channel_name)
+
                     return self._call_orig_playService(
-                        ref, checkParentalControl, forceRestart, adjust)
+                        ref,
+                        checkParentalControl,
+                        forceRestart,
+                        adjust
+                    )
 
             if not self._should_proxy(clean_url):
                 enhanced_log(
-                    f"🔄 [SERVICEMONITOR] URL non richiede proxy: {clean_url[:100]}...", "DEBUG")
+                    "🔄 [SERVICEMONITOR] URL does not require proxy: " + clean_url[:100] + "...",
+                    "DEBUG"
+                )
                 self._reset_proxy_state()
                 return self._call_orig_playService(
-                    ref, checkParentalControl, forceRestart, adjust)
+                    ref, checkParentalControl, forceRestart, adjust
+                )
 
-            # Log specifico per powerset
+            # Specific log for powerset
             if "powerset" in clean_url.lower():
                 enhanced_log(
-                    f"🎯 [SERVICEMONITOR] Rilevato canale POWERSET: {clean_url}", "INFO")
+                    "🎯 [SERVICEMONITOR] POWERSET channel detected: " + clean_url,
+                    "INFO"
+                )
                 enhanced_log(
-                    f"🎯 [SERVICEMONITOR] Nome canale: {channel_name}", "INFO")
+                    "🎯 [SERVICEMONITOR] Channel name: " + channel_name,
+                    "INFO"
+                )
 
-            # CRITICO: Pulisci cache quando cambi canale per evitare conflitti
-            # Gestione speciale per diversi provider di streaming
+            # Clear cache when switching channel to avoid conflicts
+            # Special handling for different streaming providers
             url_lower = clean_url.lower()
 
-            # Gestione VIX (stream audio/video separati)
-            if any(
-                vix_domain in url_lower for vix_domain in [
-                    'vix',
-                    'vixcloud',
-                    'vixsrc']):
+            # VIX handling (separate audio/video streams)
+            if any(vix_domain in url_lower for vix_domain in ['vix', 'vixcloud', 'vixsrc']):
                 enhanced_log(
-                    f"🎯 [SERVICEMONITOR] Rilevato canale VIX: {clean_url}", "INFO")
+                    "🎯 [SERVICEMONITOR] VIX channel detected: " + clean_url,
+                    "INFO"
+                )
                 enhanced_log(
-                    f"🧹 [SERVICEMONITOR] Pulizia cache per cambio canale VIX", "INFO")
+                    "🧹 [SERVICEMONITOR] Clearing cache for VIX channel switch",
+                    "INFO"
+                )
                 try:
-                    # Import dinamico per evitare dipendenze circolari
+                    # Dynamic import to avoid circular dependencies
                     from .AppCore import clear_stream_cache
                     clear_stream_cache()
-                    # Pulizia cache segmenti TS e dati stream
+
+                    # Clear TS segment and stream data cache
                     self._clear_ts_cache()
                 except Exception as e:
                     enhanced_log(
-                        f"⚠️ [SERVICEMONITOR] Errore pulizia cache VIX: {e}",
-                        "WARNING")
+                        "⚠️ [SERVICEMONITOR] Error clearing VIX cache: " + str(e),
+                        "WARNING"
+                    )
 
-            # Gestione DADDY - pulizia SOLO cache stream locale (NON cache
-            # DLHD)
+            # DADDY handling - ONLY local stream cache cleanup (NOT DLHD cache)
             elif any(d in url_lower for d in ['thedaddy', 'daddy', 'dlhd', 'newkso.ru']):
                 enhanced_log(
-                    f"🎯 [SERVICEMONITOR] Rilevato canale DADDY: {clean_url}", "INFO")
+                    "🎯 [SERVICEMONITOR] DADDY channel detected: " + clean_url,
+                    "INFO"
+                )
                 try:
-                    # ✅ CORREZIONE: NON pulire cache DLHD (troppo aggressivo)
-                    # Pulisci solo cache stream locale per evitare conflitti
-                    # tra segmenti
+                    # DO NOT clear DLHD cache (too aggressive)
+                    # Only clear local stream cache to avoid segment conflicts
                     from .AppCore import clear_stream_cache
                     clear_stream_cache()
+
                     enhanced_log(
-                        "🧹 [SERVICEMONITOR] Cache stream locale pulita", "INFO")
+                        "🧹 [SERVICEMONITOR] Local stream cache cleared",
+                        "INFO"
+                    )
                 except Exception as e:
                     enhanced_log(
-                        f"⚠️ [SERVICEMONITOR] Errore pulizia cache: {e}", "WARNING")
+                        "⚠️ [SERVICEMONITOR] Cache error: " + str(e),
+                        "WARNING"
+                    )
 
-            # Gestione VAVOO - pulizia aggressiva
+            # VAVOO handling - aggressive cleanup
             elif 'vavoo' in url_lower:
                 enhanced_log(
-                    f"🎯 [SERVICEMONITOR] Rilevato canale VAVOO: {clean_url}", "INFO")
+                    "🎯 [SERVICEMONITOR] VAVOO channel detected: " + clean_url,
+                    "INFO"
+                )
                 try:
-                    from .AppCore import clear_stream_cache, _clear_vavoo_resolved_url_cache, prefetch_vavoo_m3u8
+                    from .AppCore import (
+                        clear_stream_cache,
+                        _clear_vavoo_resolved_url_cache,
+                        prefetch_vavoo_m3u8
+                    )
+
                     clear_stream_cache()
-                    _clear_vavoo_resolved_url_cache("cambio canale")
-                    # Forza pulizia cache Enigma2
+                    _clear_vavoo_resolved_url_cache("channel switch")
+
+                    # Force Enigma2 cache cleanup
                     self._clear_ts_cache()
+
                     prefetch_vavoo_m3u8(clean_url)
+
                     enhanced_log(
-                        "🧹 [SERVICEMONITOR] Cache VAVOO pulite e prefetch avviato", "INFO")
+                        "🧹 [SERVICEMONITOR] VAVOO caches cleared and prefetch started",
+                        "INFO"
+                    )
                 except Exception as e:
                     enhanced_log(
-                        f"⚠️ [SERVICEMONITOR] Errore pulizia cache VAVOO: {e}",
-                        "WARNING")
+                        "⚠️ [SERVICEMONITOR] VAVOO cache error: " + str(e),
+                        "WARNING"
+                    )
 
-            # Gestione DLHD
+            # DLHD handling
             elif 'dlhd' in url_lower:
                 enhanced_log(
-                    f"🎯 [SERVICEMONITOR] Rilevato canale DLHD: {clean_url}", "INFO")
+                    "🎯 [SERVICEMONITOR] DLHD channel detected: " + clean_url,
+                    "INFO"
+                )
                 try:
                     from .AppCore import clear_stream_cache
                     clear_stream_cache()
                 except Exception as e:
                     enhanced_log(
-                        f"⚠️ [SERVICEMONITOR] Errore pulizia cache DLHD: {e}",
-                        "WARNING")
+                        "⚠️ [SERVICEMONITOR] DLHD cache clearing error: " + str(e),
+                        "WARNING"
+                    )
 
-            # Gestione NEWKSO
+            # NEWKSO handling
             elif 'newkso.ru' in url_lower:
                 enhanced_log(
-                    f"🎯 [SERVICEMONITOR] Rilevato canale NEWKSO: {clean_url}", "INFO")
+                    "🎯 [SERVICEMONITOR] NEWKSO channel detected: " + clean_url,
+                    "INFO"
+                )
                 try:
                     from .AppCore import clear_stream_cache
                     clear_stream_cache()
                 except Exception as e:
                     enhanced_log(
-                        f"⚠️ [SERVICEMONITOR] Errore pulizia cache NEWKSO: {e}",
-                        "WARNING")
+                        "⚠️ [SERVICEMONITOR] NEWKSO cache clearing error: " + str(e),
+                        "WARNING"
+                    )
 
-            # Gestione Sport99 / CDNLiveTV
+            # Sport99 / CDNLiveTV handling
             if SPORT99_AVAILABLE and is_sport99_link(clean_url):
                 enhanced_log(
-                    f"[SERVICEMONITOR] Rilevato canale Sport99/CDNLiveTV: {clean_url}",
-                    "INFO")
+                    "[SERVICEMONITOR] Sport99/CDNLiveTV channel detected: " + clean_url,
+                    "INFO"
+                )
                 try:
-                    from .AppCore import clear_stream_cache
+                    from .AppCore import clear_stream_cache()
                     clear_stream_cache()
+
                     enhanced_log(
-                        "[SERVICEMONITOR] Cache stream locale pulita per Sport99", "INFO")
+                        "[SERVICEMONITOR] Local stream cache cleared for Sport99",
+                        "INFO"
+                    )
                 except Exception as e:
                     enhanced_log(
-                        f"[SERVICEMONITOR] Errore pulizia cache Sport99: {e}",
-                        "WARNING")
+                        "[SERVICEMONITOR] Sport99 cache clearing error: " + str(e),
+                        "WARNING"
+                    )
 
-            # Gestione Freeshot
+            # Freeshot handling
             freeshot_proxy_url = None
 
             try:
-                # Gestione canali Freeshot (popcdn.day)
+                # Freeshot channel handling (popcdn.day)
                 if FREESHOT_AVAILABLE and is_freeshot_link(clean_url):
                     enhanced_log(
-                        f"🎯 [SERVICEMONITOR] Rilevato canale Freeshot: {channel_name}", "INFO")
-                    try:
-                        resolved_freeshot = freeshot_extractor.extract(
-                            clean_url)
-                        if resolved_freeshot and resolved_freeshot.get(
-                                'resolved_url'):
-                            enhanced_log(
-                                f"✅ [SERVICEMONITOR] Freeshot risolto: {
-                                    resolved_freeshot['resolved_url']}", "INFO")
-                            enhanced_log(
-                                f"🔍 [SERVICEMONITOR] Headers da extractor: {
-                                    resolved_freeshot.get(
-                                        'headers', {})}", "DEBUG")
+                        "🎯 [SERVICEMONITOR] Freeshot channel detected: " + channel_name,
+                        "INFO"
+                    )
 
-                            # ✅ CORREZIONE: Pulisci cache per Freeshot (usa fMP4, non TS)
+                    try:
+                        resolved_freeshot = freeshot_extractor.extract(clean_url)
+
+                        if resolved_freeshot and resolved_freeshot.get('resolved_url'):
+                            enhanced_log(
+                                "✅ [SERVICEMONITOR] Freeshot resolved: " +
+                                resolved_freeshot['resolved_url'],
+                                "INFO"
+                            )
+
+                            enhanced_log(
+                                "🔍 [SERVICEMONITOR] Extractor headers: " +
+                                str(resolved_freeshot.get('headers', {})),
+                                "DEBUG"
+                            )
+
+                            # Clear cache for Freeshot (uses fMP4, not TS)
                             try:
                                 from .AppCore import clear_stream_cache
                                 clear_stream_cache()
+
                                 enhanced_log(
-                                    "🧹 [SERVICEMONITOR] Cache pulita per Freeshot (fMP4)", "INFO")
+                                    "🧹 [SERVICEMONITOR] Cache cleared for Freeshot (fMP4)",
+                                    "INFO"
+                                )
                             except Exception as cache_e:
                                 enhanced_log(
-                                    f"⚠️ [SERVICEMONITOR] Errore pulizia cache Freeshot: {cache_e}", "WARNING")
+                                    "⚠️ [SERVICEMONITOR] Freeshot cache error: " + str(cache_e),
+                                    "WARNING"
+                                )
 
-                            # Crea URL proxy con headers custom
+                            # Create proxy URL with custom headers
                             headers_query = "&".join(
-                                [f"h_{quote(k)}={quote(v)}" for k, v in resolved_freeshot.get('headers', {}).items()])
-                            freeshot_proxy_url = f"http://127.0.0.1:7860/proxy/m3u?url={
-                                quote(
-                                    resolved_freeshot['resolved_url'])}&{headers_query}"
+                                [
+                                    "h_" + quote(k) + "=" + quote(v)
+                                    for k, v in resolved_freeshot.get('headers', {}).items()
+                                ]
+                            )
+
+                            freeshot_proxy_url = (
+                                "http://127.0.0.1:7860/proxy/m3u?url="
+                                + quote(resolved_freeshot['resolved_url'])
+                                + "&"
+                                + headers_query
+                            )
+
                             enhanced_log(
-                                f"✅ [SERVICEMONITOR] URL Freeshot proxy creato (supporto fMP4)", "INFO")
+                                "✅ [SERVICEMONITOR] Freeshot proxy URL created (fMP4 support)",
+                                "INFO"
+                            )
+
                             enhanced_log(
-                                f"🔍 [SERVICEMONITOR] Proxy URL completo: {freeshot_proxy_url}", "DEBUG")
+                                "🔍 [SERVICEMONITOR] Full proxy URL: " + freeshot_proxy_url,
+                                "DEBUG"
+                            )
+
                     except Exception as e:
                         enhanced_log(
-                            f"❌ [SERVICEMONITOR] Errore risoluzione Freeshot: {e}", "ERROR")
+                            "❌ [SERVICEMONITOR] Freeshot resolution error: " + str(e),
+                            "ERROR"
+                        )
                         freeshot_proxy_url = None
+
             except Exception as e:
                 enhanced_log(
-                    f"❌ [SERVICEMONITOR] Errore gestione Freeshot: {e}",
-                    "ERROR")
+                    "❌ [SERVICEMONITOR] Freeshot handling error: " + str(e),
+                    "ERROR"
+                )
                 freeshot_proxy_url = None
 
-            # Gestione TVTap
-            tvtap_proxy_url = None
+         # TVTap handling
+        tvtap_proxy_url = None
 
-            try:
-                # Gestione canali TVTap WMS (stream.mardio.link con
-                # wmsAuthSign)
-                if TVTAP_WMS_AVAILABLE and is_wms_tvtap_url(clean_url):
+        try:
+            # TVTap WMS channels (stream.mardio.link with wmsAuthSign)
+            if TVTAP_WMS_AVAILABLE and is_wms_tvtap_url(clean_url):
+                enhanced_log(
+                    "🎯 [SERVICEMONITOR] TVTap WMS channel detected: " + channel_name,
+                    "INFO"
+                )
+
+                tvtap_proxy_url = get_wms_proxy_url(clean_url, channel_name)
+
+                if tvtap_proxy_url:
                     enhanced_log(
-                        f"🎯 [SERVICEMONITOR] Rilevato canale TVTap WMS: {channel_name}", "INFO")
-                    tvtap_proxy_url = get_wms_proxy_url(
-                        clean_url, channel_name)
-                    if tvtap_proxy_url:
+                        "✅ [SERVICEMONITOR] TVTap WMS URL resolved",
+                        "INFO"
+                    )
+
+                    resolved_data = resolve_wms_tvtap_url(clean_url, channel_name)
+
+                    if resolved_data and resolved_data.get('decoded_info'):
+                        valid_minutes = resolved_data['decoded_info'].get('valid_minutes', 'N/A')
+
                         enhanced_log(
-                            f"✅ [SERVICEMONITOR] URL TVTap WMS risolto", "INFO")
-                        resolved_data = resolve_wms_tvtap_url(
-                            clean_url, channel_name)
-                        if resolved_data and resolved_data.get('decoded_info'):
-                            valid_minutes = resolved_data['decoded_info'].get(
-                                'valid_minutes', 'N/A')
-                            enhanced_log(
-                                f"🔑 [SERVICEMONITOR] wmsAuthSign valido per: {valid_minutes} minuti", "DEBUG")
+                            "🔑 [SERVICEMONITOR] wmsAuthSign valid for: " +
+                            str(valid_minutes) +
+                            " minutes",
+                            "DEBUG"
+                        )
 
-                # Gestione TVTap standard
-                elif any(pattern in clean_url.lower() for pattern in ['tvtap', 'rocktalk.net', 'taptube.net', 'authsign=']):
-                    enhanced_log(
-                        f"🎯 [SERVICEMONITOR] Rilevato URL TVTap standard: {clean_url}", "INFO")
-                    tvtap_proxy_url = f"http://127.0.0.1:7860/proxy/m3u?url={
-                        quote(clean_url)}"
-                    enhanced_log(
-                        f"✅ [SERVICEMONITOR] URL TVTap configurato", "INFO")
-            except Exception as e:
+            # Standard TVTap handling
+            elif any(pattern in clean_url.lower() for pattern in ['tvtap', 'rocktalk.net', 'taptube.net', 'authsign=']):
                 enhanced_log(
-                    f"❌ [SERVICEMONITOR] Errore gestione TVTap: {e}", "ERROR")
-                tvtap_proxy_url = None
+                    "🎯 [SERVICEMONITOR] Standard TVTap URL detected: " + clean_url,
+                    "INFO"
+                )
 
-            # Salva ref originale
-            self.last_original_ref = ref
-            self.proxy_active = True
-            self._save_channel_info(ref_str, clean_url, channel_name)
+                tvtap_proxy_url = (
+                    "http://127.0.0.1:7860/proxy/m3u?url=" + quote(clean_url)
+                )
 
-            # Usa URL Freeshot risolto se disponibile, altrimenti TVTap,
-            # altrimenti determina il tipo di proxy
-            if freeshot_proxy_url:
-                proxy_url = freeshot_proxy_url
                 enhanced_log(
-                    f"✅ [SERVICEMONITOR] Usando proxy URL Freeshot: {proxy_url[:100]}...", "INFO")
-            elif tvtap_proxy_url:
-                proxy_url = tvtap_proxy_url
-                enhanced_log(
-                    f"✅ [SERVICEMONITOR] Usando proxy URL TVTap: {proxy_url}", "INFO")
-            else:
-                # Determina il tipo di proxy da usare
-                if clean_url.lower().endswith(
-                        '.mpd') or '/dash/' in clean_url.lower() or 'browser-dash' in clean_url.lower():
-                    # Stream MPD (DASH)
-                    enhanced_log(
-                        f"🎬 [SERVICEMONITOR] Creando proxy MPD per: {clean_url[:50]}...", "INFO")
-                    proxy_url = f"http://127.0.0.1:7860/proxy/mpd?url={
-                        quote(clean_url)}"
-                else:
-                    # Stream M3U8 (HLS) o altri
-                    proxy_url = f"http://127.0.0.1:7860/proxy/m3u?url={
-                        quote(clean_url)}"
-                enhanced_log(
-                    f"✅ [SERVICEMONITOR] Creato proxy URL: {proxy_url}", "INFO")
-
-            prefix = ":".join(parts[0:10])
-            safe_name = channel_name or "Stream Proxy"
-            new_service_str = f"{prefix}:{quote(proxy_url)}:{safe_name}"
-            proxy_ref = eServiceReference(new_service_str)
-            # Imposta selezione alternativa per compatibilità UI
-            self._set_current_selection_alternative(proxy_ref)
-
-            return self._call_orig_playService(
-                proxy_ref, checkParentalControl, forceRestart, adjust)
+                    "✅ [SERVICEMONITOR] TVTap URL configured",
+                    "INFO"
+                )
 
         except Exception as e:
-            enhanced_log(f"❌ Errore interceptPlayService: {e}", "ERROR")
+            enhanced_log(
+                "❌ [SERVICEMONITOR] TVTap handling error: " + str(e),
+                "ERROR"
+            )
+            tvtap_proxy_url = None
+
+
+        # Save original ref
+        self.last_original_ref = ref
+        self.proxy_active = True
+        self._save_channel_info(ref_str, clean_url, channel_name)
+
+        # Use resolved Freeshot URL if available, otherwise TVTap, otherwise determine proxy type
+        if freeshot_proxy_url:
+            proxy_url = freeshot_proxy_url
+            enhanced_log(
+                "✅ [SERVICEMONITOR] Using Freeshot proxy URL: " + proxy_url[:100] + "...",
+                "INFO"
+            )
+
+        elif tvtap_proxy_url:
+            proxy_url = tvtap_proxy_url
+            enhanced_log(
+                "✅ [SERVICEMONITOR] Using TVTap proxy URL: " + proxy_url,
+                "INFO"
+            )
+
+        else:
+            # Determine proxy type
+            url_lower = clean_url.lower()
+
+            if (
+                url_lower.endswith('.mpd')
+                or '/dash/' in url_lower
+                or 'browser-dash' in url_lower
+            ):
+                # MPD stream (DASH)
+                enhanced_log(
+                    "🎬 [SERVICEMONITOR] Creating MPD proxy for: " + clean_url[:50] + "...",
+                    "INFO"
+                )
+
+                proxy_url = (
+                    "http://127.0.0.1:7860/proxy/mpd?url=" + quote(clean_url)
+                )
+
+            else:
+                # M3U8 (HLS) or other stream
+                proxy_url = (
+                    "http://127.0.0.1:7860/proxy/m3u?url=" + quote(clean_url)
+                )
+
+            enhanced_log(
+                "✅ [SERVICEMONITOR] Created proxy URL: " + proxy_url,
+                "INFO"
+            )
+
+
+        prefix = ":".join(parts[0:10])
+        safe_name = channel_name or "Stream Proxy"
+
+        new_service_str = ":".join([
+            prefix,
+            quote(proxy_url),
+            safe_name
+        ])
+
+        proxy_ref = eServiceReference(new_service_str)
+
+        self._set_current_selection_alternative(proxy_ref)
+
+        return self._call_orig_playService(
+            proxy_ref,
+            checkParentalControl,
+            forceRestart,
+            adjust
+        )
+
+        except Exception as e:
+            enhanced_log(
+                "❌ interceptPlayService error: " + str(e),
+                "ERROR"
+            )
             self._reset_proxy_state()
+
             return self._call_orig_playService(
-                ref, checkParentalControl, forceRestart, adjust)
+                ref,
+                checkParentalControl,
+                forceRestart,
+                adjust
+            )
 
     def _detect_playservice_signature(self):
-        """Rileva la signature del metodo playService per Enigma2"""
+        """Detect playService method signature for Enigma2"""
         if not self._orig_playService:
             return
 
@@ -676,17 +831,18 @@ class StreamProxyServiceMonitor:
             sig = inspect.signature(self._orig_playService)
             param_names = list(sig.parameters.keys())
 
-            # Enigma2 moderno usa sempre 4 parametri
             self._playservice_signature = 4  # ref, checkParentalControl, forceRestart, adjust
+
             enhanced_log(
-                "✅ [SERVICEMONITOR] Configurato per Enigma2 moderno",
-                "INFO")
+                "✅ [SERVICEMONITOR] Configured for modern Enigma2",
+                "INFO"
+            )
 
         except Exception as e:
             enhanced_log(
-                f"⚠️ [SERVICEMONITOR] Fallback a configurazione standard Enigma2: {e}",
-                "WARNING")
-            # Fallback alla configurazione più comune per Enigma2
+                "⚠️ [SERVICEMONITOR] Fallback to standard Enigma2 configuration: " + str(e),
+                "WARNING"
+            )
             self._playservice_signature = 4
 
     def _call_orig_playService(
@@ -695,136 +851,176 @@ class StreamProxyServiceMonitor:
             checkParentalControl=True,
             forceRestart=False,
             adjust=True):
-        """Chiama il metodo playService originale con compatibilità multi-distro"""
+        """Call original playService method with multi-distro compatibility"""
+
         if not self._orig_playService:
             return False
 
-        # Se abbiamo rilevato la signature, usala direttamente
         if self._playservice_signature == 4:
             try:
                 return self._orig_playService(
-                    ref, checkParentalControl, forceRestart, adjust)
+                    ref, checkParentalControl, forceRestart, adjust
+                )
             except Exception as e:
                 enhanced_log(
-                    f"❌ [SERVICEMONITOR] Errore con signature 4: {e}", "ERROR")
+                    "❌ [SERVICEMONITOR] Error with signature 4: " + str(e),
+                    "ERROR"
+                )
                 return False
+
         elif self._playservice_signature == 3:
             try:
                 return self._orig_playService(
-                    ref, checkParentalControl, forceRestart)
+                    ref, checkParentalControl, forceRestart
+                )
             except Exception as e:
                 enhanced_log(
-                    f"❌ [SERVICEMONITOR] Errore con signature 3: {e}", "ERROR")
+                    "❌ [SERVICEMONITOR] Error with signature 3: " + str(e),
+                    "ERROR"
+                )
                 return False
+
         elif self._playservice_signature == 2:
             try:
-                return self._orig_playService(ref, checkParentalControl)
+                return self._orig_playService(
+                    ref, checkParentalControl
+                )
             except Exception as e:
                 enhanced_log(
-                    f"❌ [SERVICEMONITOR] Errore con signature 2: {e}", "ERROR")
+                    "❌ [SERVICEMONITOR] Error with signature 2: " + str(e),
+                    "ERROR"
+                )
                 return False
+
         elif self._playservice_signature == 1:
             try:
                 return self._orig_playService(ref)
             except Exception as e:
                 enhanced_log(
-                    f"❌ [SERVICEMONITOR] Errore con signature 1: {e}", "ERROR")
+                    "❌ [SERVICEMONITOR] Error with signature 1: " + str(e),
+                    "ERROR"
+                )
                 return False
 
-        # Fallback dinamico se non abbiamo rilevato la signature
         try:
-            # Prova prima con tutti i parametri (OpenATV style)
             return self._orig_playService(
-                ref, checkParentalControl, forceRestart)
+                ref, checkParentalControl, forceRestart
+            )
+
         except TypeError as e:
             if "unexpected keyword argument" in str(e):
                 try:
-                    # Fallback: solo ref e checkParentalControl (OpenPLi style)
+                    # Fallback: only ref + checkParentalControl (OpenPLi style)
                     enhanced_log(
-                        "🔄 [SERVICEMONITOR] Fallback a playService con 2 parametri", "DEBUG")
-                    self._playservice_signature = 2  # Cache per chiamate future
-                    return self._orig_playService(ref, checkParentalControl)
+                        "🔄 [SERVICEMONITOR] Fallback to playService with 2 parameters",
+                        "DEBUG"
+                    )
+
+                    self._playservice_signature = 2  # Cache for future calls
+
+                    return self._orig_playService(
+                        ref, checkParentalControl
+                    )
+
                 except TypeError:
                     try:
-                        # Fallback finale: solo ref (versioni molto vecchie)
+                        # Final fallback: only ref (very old versions)
                         enhanced_log(
-                            "🔄 [SERVICEMONITOR] Fallback a playService con 1 parametro", "DEBUG")
-                        self._playservice_signature = 1  # Cache per chiamate future
+                            "🔄 [SERVICEMONITOR] Fallback to playService with 1 parameter",
+                            "DEBUG"
+                        )
+
+                        self._playservice_signature = 1  # Cache for future calls
+
                         return self._orig_playService(ref)
+
                     except Exception as final_e:
                         enhanced_log(
-                            f"❌ [SERVICEMONITOR] Tutti i fallback falliti: {final_e}", "ERROR")
+                            "❌ [SERVICEMONITOR] All fallbacks failed: " + str(final_e),
+                            "ERROR"
+                        )
                         return False
             else:
                 enhanced_log(
-                    f"❌ [SERVICEMONITOR] Errore playService non gestito: {e}",
-                    "ERROR")
+                    "❌ [SERVICEMONITOR] Unhandled playService error: " + str(e),
+                    "ERROR"
+                )
                 return False
+
         except Exception as e:
             enhanced_log(
-                f"❌ [SERVICEMONITOR] Errore generico playService: {e}",
-                "ERROR")
+                "❌ [SERVICEMONITOR] Generic playService error: " + str(e),
+                "ERROR"
+            )
             return False
 
-    # Aggiungi dopo la sezione _interceptPlayService, prima dei metodi helper:
-
     def _clear_ts_cache(self):
-        """Pulisce cache segmenti TS e dati stream"""
+        """Clear TS segments and stream data cache"""
         try:
-            # Pulizia cache Enigma2 per segmenti TS
+            # Enigma2 cache cleanup for TS segments
             from enigma import eServiceCenter
             serviceCenter = eServiceCenter.getInstance()
+
             if hasattr(serviceCenter, 'clearCache'):
                 serviceCenter.clearCache()
+
                 enhanced_log(
-                    "🧹 [SERVICEMONITOR] Cache Enigma2 pulita", "DEBUG")
+                    "🧹 [SERVICEMONITOR] Enigma2 cache cleared",
+                    "DEBUG"
+                )
+
         except Exception as e:
             enhanced_log(
-                f"⚠️ [SERVICEMONITOR] Errore pulizia cache TS: {e}",
-                "DEBUG")
+                "⚠️ [SERVICEMONITOR] TS cache clearing error: " + str(e),
+                "DEBUG"
+            )
+
 
     def _set_current_selection_alternative(self, proxy_ref):
-        """Imposta selezione alternativa per compatibilità UI"""
+        """Set alternative selection for UI compatibility"""
         try:
-            # Cerca ChannelSelection attiva
+            # Find active ChannelSelection
             from Screens.InfoBar import InfoBar
+
             if InfoBar.instance:
                 session = InfoBar.instance.session
+
                 if hasattr(session, 'current_dialog'):
                     current = session.current_dialog
+
                     if hasattr(current, 'setCurrentSelectionAlternative'):
                         current.setCurrentSelectionAlternative(proxy_ref)
+
                         enhanced_log(
-                            "🎯 [SERVICEMONITOR] setCurrentSelectionAlternative impostato", "DEBUG")
+                            "🎯 [SERVICEMONITOR] setCurrentSelectionAlternative set",
+                            "DEBUG"
+                        )
+
         except Exception as e:
             enhanced_log(
-                f"⚠️ [SERVICEMONITOR] Errore setCurrentSelectionAlternative: {e}",
-                "DEBUG")
+                "⚠️ [SERVICEMONITOR] setCurrentSelectionAlternative error: " + str(e),
+                "DEBUG"
+            )
 
-    # =========================
-    # Helpers
-    # =========================
 
     def _should_proxy(self, url: str) -> bool:
-        """Verifica se URL richiede proxy - SOLO domini autorizzati"""
+        """Check if URL requires proxy - ONLY authorized domains"""
+
         if not url:
             return False
 
         url_lower = url.lower()
-
-        # Estrai il dominio dall'URL per controlli più precisi
         domain_part = ""
+
         try:
-            if url_lower.startswith(
-                    "http://") or url_lower.startswith("https://"):
-                # Rimuovi protocollo
+            if url_lower.startswith("http://") or url_lower.startswith("https://"):
                 url_without_protocol = url_lower.split("://", 1)[1]
-                # Estrai solo la parte del dominio (prima dello slash)
                 domain_part = url_without_protocol.split("/")[0]
+
         except Exception:
             domain_part = url_lower
 
-        # ✅ DOMINI AUTORIZZATI - Solo questi vengono proxati
+        # DOMINI AUTORIZZATI - Solo questi vengono proxati
         authorized_domains = (
             # DaddyLive e derivati
             "daddy", "dlhd", "thedaddy", "daddylive", "newkso.ru",
@@ -865,7 +1061,7 @@ class StreamProxyServiceMonitor:
                 "DEBUG")
             return True
 
-        # ❌ Tutti gli altri URL NON vengono proxati
+        # Tutti gli altri URL NON vengono proxati
         enhanced_log(
             f"🔄 [SERVICEMONITOR] URL non autorizzato, passthrough diretto",
             "DEBUG")
@@ -875,7 +1071,7 @@ class StreamProxyServiceMonitor:
         return any(p in (ref_str or "") for p in self.PROXY_PATTERNS)
 
     def _is_already_proxy_url(self, url: str) -> bool:
-        """✅ Verifica se URL è già un proxy URL (da plugin esterno)"""
+        """Verifica se URL è già un proxy URL (da plugin esterno)"""
         if not url:
             return False
         url_lower = url.lower()
@@ -883,7 +1079,7 @@ class StreamProxyServiceMonitor:
                 "localhost:7860" in url_lower) and "/proxy" in url_lower
 
     def _extract_original_url_from_proxy_url(self, proxy_url: str) -> str:
-        """✅ Estrae URL originale da proxy URL (formato: http://127.0.0.1:7860/proxy?url=...)"""
+        """Estrae URL originale da proxy URL (formato: http://127.0.0.1:7860/proxy?url=...)"""
         try:
             if "url=" in proxy_url:
                 url_start = proxy_url.find("url=") + 4
@@ -902,7 +1098,7 @@ class StreamProxyServiceMonitor:
             return None
 
     def _extract_original_url_from_proxy(self, ref_str: str) -> str:
-        """✅ Estrae URL originale da riferimento proxy (per plugin esterni)"""
+        """Estrae URL originale da riferimento proxy (per plugin esterni)"""
         try:
             # Cerca pattern proxy/m3u?url=...
             if "proxy/m3u?url=" in ref_str or "proxy%2Fm3u?url=" in ref_str:
@@ -937,11 +1133,9 @@ class StreamProxyServiceMonitor:
         """Forza l'uso di exteplayer3 per stream MPD/DASH"""
         try:
             from enigma import eServiceReference
-            # Service type 5001 = exteplayer3 DASH
             mpd_ref_str = ref.toString()
             parts = mpd_ref_str.split(':')
             if len(parts) > 0:
-                # Cambia service type a 5001 (exteplayer3 DASH)
                 parts[0] = '5001'
                 new_ref_str = ':'.join(parts)
                 enhanced_log(
@@ -973,9 +1167,6 @@ class StreamProxyServiceMonitor:
         except Exception as e:
             enhanced_log(f"❌ Errore salvataggio config: {e}", "ERROR")
 
-    # =========================
-    # Cleanup
-    # =========================
     def cleanup(self):
         nav = getattr(self.session, "nav", None)
         if nav and self._orig_playService:
