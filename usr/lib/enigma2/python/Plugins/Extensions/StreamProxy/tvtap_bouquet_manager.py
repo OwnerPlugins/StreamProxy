@@ -246,7 +246,8 @@ class TVTapBouquetManager:
 
                     return cached_data
                 else:
-                    enhanced_log("TVTap cache expired, removing entry", "DEBUG")
+                    enhanced_log(
+                        "TVTap cache expired, removing entry", "DEBUG")
                     del self.url_cache[cache_key]
 
             # Resolve new URL
@@ -506,9 +507,11 @@ class TVTapBouquetManager:
         proxy_url = f"{base_proxy_url}/proxy/m3u?url={quote(resolved_url)}"
 
         enhanced_log(
-            f"TVTap proxy URL generated for: {channel_info.get('name', 'Unknown')}",
-            "DEBUG"
-        )
+            f"TVTap proxy URL generated for: {
+                channel_info.get(
+                    'name',
+                    'Unknown')}",
+            "DEBUG")
 
         return proxy_url
 
