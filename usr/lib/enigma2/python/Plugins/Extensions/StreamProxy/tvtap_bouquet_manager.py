@@ -203,22 +203,22 @@ class TVTapBouquetManager:
         return False
 
     def is_tvtap_service_ref(self, service_ref):
-        """Verifica se un service reference è un canale TVTap."""
+        """Check whether a service reference is a TVTap channel."""
         with self.lock:
             return service_ref in self.tvtap_channels
 
     def get_tvtap_channel_info(self, service_ref):
-        """Ottiene informazioni su un canale TVTap dal service reference."""
+        """Get TVTap channel information from the service reference."""
         with self.lock:
             return self.tvtap_channels.get(service_ref)
 
     def resolve_tvtap_url(self, original_url, channel_name=None):
         """
-        Risolve un URL TVTap gestendo authSign dinamico.
+        Resolve a TVTap URL handling dynamic authSign.
 
         Args:
-            original_url (str): URL originale del canale
-            channel_name (str, optional): Nome del canale
+            original_url (str): Original channel URL
+            channel_name (str, optional): Channel name
 
         Returns:
             dict: {
@@ -228,41 +228,42 @@ class TVTapBouquetManager:
                 'authsign': str
             }
         """
-        enhanced_log(f"Risoluzione URL TVTap: {original_url[:100]}...", "INFO")
+        enhanced_log(f"Resolving TVTap URL: {original_url[:100]}...", "INFO")
 
         with self.lock:
-            # Controlla cache esistente
+            # Check existing cache
             cache_key = self._get_cache_key(original_url)
 
             if cache_key in self.url_cache:
                 cached_data = self.url_cache[cache_key]
 
                 if self._is_cache_valid(cached_data):
-                    enhanced_log("URL TVTap trovato in cache valida", "DEBUG")
+                    enhanced_log("TVTap URL found in valid cache", "DEBUG")
 
-                    # Avvia refresh proattivo se necessario
+                    # Start proactive refresh if needed
                     if self._needs_proactive_refresh(cached_data):
                         self._start_background_refresh(original_url, cache_key)
 
                     return cached_data
                 else:
-                    enhanced_log("Cache TVTap scaduta, rimozione", "DEBUG")
+                    enhanced_log("TVTap cache expired, removing entry", "DEBUG")
                     del self.url_cache[cache_key]
 
-            # Risolvi nuovo URL
+            # Resolve new URL
             return self._resolve_fresh_url(
-                original_url, channel_name, cache_key)
+                original_url, channel_name, cache_key
+            )
 
     def _resolve_fresh_url(self, original_url, channel_name, cache_key):
-        """Risolve un nuovo URL TVTap."""
-        enhanced_log(f"Risoluzione fresh URL TVTap: {original_url}", "INFO")
+        """Resolve a fresh TVTap URL."""
+        enhanced_log(f"Resolving fresh TVTap URL: {original_url}", "INFO")
 
         try:
-            # Estrai informazioni dall'URL originale
+            # Extract information from original URL
             parsed_url = urlparse(original_url)
             query_params = parse_qs(parsed_url.query)
 
-            # Cerca authSign esistente
+            # Look for existing authSign
             current_authsign = None
             for pattern in self.authsign_patterns:
                 match = re.search(pattern, original_url)
@@ -270,28 +271,30 @@ class TVTapBouquetManager:
                     current_authsign = match.group(1)
                     break
 
-            # Determina ID canale TVTap
+            # Determine TVTap channel ID
             channel_id = self._extract_tvtap_id(original_url, channel_name)
 
             if not channel_id:
                 enhanced_log(
-                    "Impossibile determinare ID canale TVTap", "ERROR")
+                    "Unable to determine TVTap channel ID", "ERROR"
+                )
                 return None
 
-            # Ottieni nuovo stream da TVTap
+            # Get new stream from TVTap
             new_stream_url = get_tvtap_stream(channel_id)
 
             if not new_stream_url:
                 enhanced_log(
-                    f"Impossibile ottenere stream per canale TVTap {channel_id}",
-                    "ERROR")
+                    f"Unable to fetch stream for TVTap channel {channel_id}",
+                    "ERROR"
+                )
                 return None
 
-            # Analizza nuovo URL
+            # Parse new URL
             new_parsed = urlparse(new_stream_url)
             new_domain = new_parsed.netloc
 
-            # Estrai nuovo authSign
+            # Extract new authSign
             new_authsign = None
             for pattern in self.authsign_patterns:
                 match = re.search(pattern, new_stream_url)
@@ -299,10 +302,10 @@ class TVTapBouquetManager:
                     new_authsign = match.group(1)
                     break
 
-            # Calcola scadenza
+            # Calculate expiration
             expires_at = self._calculate_expiry(new_stream_url)
 
-            # Crea dati cache
+            # Create cache entry
             cache_data = {
                 'resolved_url': new_stream_url,
                 'original_url': original_url,
@@ -314,24 +317,27 @@ class TVTapBouquetManager:
                 'access_count': 0
             }
 
-            # Salva in cache
+            # Save to cache
             self.url_cache[cache_key] = cache_data
 
-            # Aggiorna cache domini
+            # Update domain cache
             self.domain_cache[new_domain] = datetime.now()
 
             enhanced_log(
-                f"URL TVTap risolto: {new_domain} - authSign: {new_authsign[:10] if new_authsign else 'None'}...", "INFO")
-            enhanced_log(f"Scadenza: {expires_at}", "DEBUG")
+                f"TVTap URL resolved: {new_domain} - authSign: {new_authsign[:10] if new_authsign else 'None'}...",
+                "INFO"
+            )
+            enhanced_log(f"Expiration: {expires_at}", "DEBUG")
 
             return cache_data
 
         except Exception as e:
-            enhanced_log(f"Errore risoluzione URL TVTap: {e}", "ERROR")
+            enhanced_log(f"Error resolving TVTap URL: {e}", "ERROR")
             return None
 
     def _extract_tvtap_id(self, url, channel_name):
-        """Estrae l'ID TVTap dall'URL o dal nome canale."""
+        """Extract the TVTap ID from URL or channel name."""
+
         # Pattern tvtap://ID
         match = re.search(r'tvtap://(\d+)', url)
         if match:
@@ -342,7 +348,7 @@ class TVTapBouquetManager:
         if match:
             return match.group(1)
 
-        # Cerca nell'URL parametri
+        # Check URL query parameters
         parsed = urlparse(url)
         query_params = parse_qs(parsed.query)
 
@@ -350,7 +356,7 @@ class TVTapBouquetManager:
             if key in query_params:
                 return query_params[key][0]
 
-        # Prova a cercare per nome canale
+        # Try resolving by channel name
         if channel_name:
             try:
                 channels = get_tvtap_channels()
@@ -358,116 +364,122 @@ class TVTapBouquetManager:
                 if found_channel:
                     return found_channel.get('id')
             except Exception as e:
-                enhanced_log(f"Errore ricerca canale per nome: {e}", "DEBUG")
+                enhanced_log(
+                    f"Error while searching channel by name: {e}",
+                    "DEBUG"
+                )
 
         return None
 
     def _calculate_expiry(self, url):
-        """Calcola quando scade l'authSign."""
+        """Calculate when the authSign expires."""
         try:
-            # Cerca timestamp nell'URL
             parsed = urlparse(url)
             query_params = parse_qs(parsed.query)
 
-            # Pattern comuni per timestamp
+            # Common timestamp keys
             timestamp_keys = ['ts', 'timestamp', 'time', 't', 'expires']
 
             for key in timestamp_keys:
                 if key in query_params:
                     try:
                         ts_value = int(query_params[key][0])
-                        # Se sembra un timestamp Unix
-                        if ts_value > 1000000000:  # Dopo 2001
+
+                        # Looks like Unix timestamp
+                        if ts_value > 1000000000:  # after year 2001
                             return datetime.fromtimestamp(ts_value)
+
                     except (ValueError, IndexError):
                         continue
 
-            # Fallback: usa validità di default
+            # Fallback default validity
             return datetime.now() + timedelta(seconds=self.authsign_validity)
 
         except Exception:
             return datetime.now() + timedelta(seconds=self.authsign_validity)
 
     def _is_cache_valid(self, cache_data):
-        """Verifica se i dati in cache sono ancora validi."""
+        """Check whether cached data is still valid."""
         if not cache_data or 'expires_at' not in cache_data:
             return False
 
         return datetime.now() < cache_data['expires_at']
 
     def _needs_proactive_refresh(self, cache_data):
-        """Verifica se serve un refresh proattivo."""
+        """Check whether a proactive refresh is needed."""
         if not cache_data or 'expires_at' not in cache_data:
             return True
 
         time_to_expiry = (
-            cache_data['expires_at'] -
-            datetime.now()).total_seconds()
+            cache_data['expires_at'] - datetime.now()
+        ).total_seconds()
+
         return time_to_expiry <= self.refresh_before_expiry
 
     def _start_background_refresh(self, original_url, cache_key):
-        """Avvia refresh in background."""
+        """Start background refresh thread."""
         def refresh_worker():
             try:
                 enhanced_log(
-                    f"Background refresh URL TVTap: {original_url[:50]}...", "DEBUG")
-                time.sleep(5)  # Piccolo delay
+                    f"Background TVTap refresh: {original_url[:50]}...",
+                    "DEBUG"
+                )
 
-                # Ottieni info canale dalla cache
+                time.sleep(5)  # small delay
+
+                channel_name = None
+
+                # Retrieve channel info from cache
                 with self.lock:
                     if cache_key in self.url_cache:
                         cache_data = self.url_cache[cache_key]
-                        channel_name = None
 
-                        # Cerca nome canale nei dati TVTap
                         for service_ref, channel_info in self.tvtap_channels.items():
                             if channel_info.get('url') == original_url:
                                 channel_name = channel_info.get('name')
                                 break
 
-                # Refresh
                 self._resolve_fresh_url(original_url, channel_name, cache_key)
 
             except Exception as e:
-                enhanced_log(f"Errore background refresh: {e}", "ERROR")
+                enhanced_log(f"Background refresh error: {e}", "ERROR")
 
         thread = threading.Thread(target=refresh_worker, daemon=True)
         thread.start()
 
     def _get_cache_key(self, url):
-        """Genera chiave cache per URL."""
-        # Rimuovi parametri variabili per chiave consistente
+        """Generate cache key for URL."""
         parsed = urlparse(url)
         base_url = f"{parsed.scheme}://{parsed.netloc}{parsed.path}"
         return hashlib.md5(base_url.encode()).hexdigest()
 
     def _start_background_scanner(self):
-        """Avvia scanner bouquet in background."""
+        """Start bouquet scanner in background."""
         def scanner_worker():
             while True:
                 try:
                     time.sleep(self.bouquet_scan_interval)
                     self._scan_bouquets()
                 except Exception as e:
-                    enhanced_log(f"Errore scanner bouquet: {e}", "ERROR")
+                    enhanced_log(f"Error in bouquet scanner: {e}", "ERROR")
 
         scanner_thread = threading.Thread(target=scanner_worker, daemon=True)
         scanner_thread.start()
-        enhanced_log("Scanner bouquet avviato in background", "INFO")
+        enhanced_log("Bouquet scanner started in background", "INFO")
 
     def get_proxy_url_for_service(
             self,
             service_ref,
             base_proxy_url="http://127.0.0.1:7860"):
         """
-        Genera URL proxy per un service reference TVTap.
+        Generate proxy URL for a TVTap service reference.
 
         Args:
-            service_ref (str): Service reference Enigma2
-            base_proxy_url (str): URL base del proxy
+            service_ref (str): Enigma2 service reference
+            base_proxy_url (str): Base proxy URL
 
         Returns:
-            str: URL proxy o None se errore
+            str: Proxy URL or None if error
         """
         channel_info = self.get_tvtap_channel_info(service_ref)
         if not channel_info:
@@ -477,9 +489,12 @@ class TVTapBouquetManager:
         if not original_url:
             return None
 
-        # Risolvi URL con authSign aggiornato
+        # Resolve URL with updated authSign
         resolved_data = self.resolve_tvtap_url(
-            original_url, channel_info.get('name'))
+            original_url,
+            channel_info.get('name')
+        )
+
         if not resolved_data:
             return None
 
@@ -487,19 +502,18 @@ class TVTapBouquetManager:
         if not resolved_url:
             return None
 
-        # Genera URL proxy
+        # Build proxy URL
         proxy_url = f"{base_proxy_url}/proxy/m3u?url={quote(resolved_url)}"
 
         enhanced_log(
-            f"Proxy URL TVTap generato per: {
-                channel_info.get(
-                    'name',
-                    'Unknown')}",
-            "DEBUG")
+            f"TVTap proxy URL generated for: {channel_info.get('name', 'Unknown')}",
+            "DEBUG"
+        )
+
         return proxy_url
 
     def cleanup_expired_cache(self):
-        """Pulisce cache scadute."""
+        """Remove expired cache entries."""
         with self.lock:
             expired_keys = []
 
@@ -512,16 +526,18 @@ class TVTapBouquetManager:
 
             if expired_keys:
                 enhanced_log(
-                    f"Pulite {
-                        len(expired_keys)} cache TVTap scadute",
-                    "INFO")
+                    f"Removed {len(expired_keys)} expired TVTap cache entries",
+                    "INFO"
+                )
 
     def get_stats(self):
-        """Restituisce statistiche del manager."""
+        """Return manager statistics."""
         with self.lock:
             total_cached = len(self.url_cache)
-            valid_cached = sum(1 for data in self.url_cache.values()
-                               if self._is_cache_valid(data))
+            valid_cached = sum(
+                1 for data in self.url_cache.values()
+                if self._is_cache_valid(data)
+            )
 
             return {
                 'tvtap_channels_found': len(self.tvtap_channels),
@@ -532,7 +548,7 @@ class TVTapBouquetManager:
             }
 
     def force_refresh_all(self):
-        """Forza refresh di tutti gli URL in cache."""
+        """Force refresh of all cached URLs."""
         with self.lock:
             urls_to_refresh = []
 
@@ -542,31 +558,26 @@ class TVTapBouquetManager:
                     urls_to_refresh.append((original_url, key))
 
             enhanced_log(
-                f"Refresh forzato per {
-                    len(urls_to_refresh)} URL TVTap",
-                "INFO")
+                f"Forcing refresh for {len(urls_to_refresh)} TVTap URLs",
+                "INFO"
+            )
 
             for original_url, cache_key in urls_to_refresh:
                 try:
                     self._resolve_fresh_url(original_url, None, cache_key)
                 except Exception as e:
                     enhanced_log(
-                        f"Errore refresh {original_url}: {e}", "ERROR")
+                        f"Error refreshing {original_url}: {e}",
+                        "ERROR"
+                    )
 
 
-# Istanza globale del manager
 tvtap_bouquet_manager = TVTapBouquetManager()
 
 
 def is_tvtap_service_reference(service_ref):
     """
     Verifica se un service reference è un canale TVTap.
-
-    Args:
-        service_ref (str): Service reference Enigma2
-
-    Returns:
-        bool: True se è TVTap
     """
     return tvtap_bouquet_manager.is_tvtap_service_ref(service_ref)
 
@@ -575,62 +586,54 @@ def get_tvtap_proxy_url_for_service(
         service_ref,
         base_proxy_url="http://127.0.0.1:7860"):
     """
-    Ottiene URL proxy per un service reference TVTap.
-
-    Args:
-        service_ref (str): Service reference Enigma2
-        base_proxy_url (str): URL base proxy
-
-    Returns:
-        str: URL proxy o None
+    Get proxy URL for a TVTap service reference.
     """
     return tvtap_bouquet_manager.get_proxy_url_for_service(
-        service_ref, base_proxy_url)
+        service_ref,
+        base_proxy_url
+    )
 
 
 def resolve_tvtap_url_with_authsign(original_url, channel_name=None):
     """
-    Risolve URL TVTap con gestione authSign dinamico.
-
-    Args:
-        original_url (str): URL originale
-        channel_name (str, optional): Nome canale
-
-    Returns:
-        dict: Dati risoluzione o None
+    Resolve TVTap URL with dynamic authSign handling.
     """
-    return tvtap_bouquet_manager.resolve_tvtap_url(original_url, channel_name)
+    return tvtap_bouquet_manager.resolve_tvtap_url(
+        original_url,
+        channel_name
+    )
 
 
 def cleanup_tvtap_cache():
-    """Pulisce cache TVTap scadute."""
+    """Clean expired TVTap cache entries."""
     tvtap_bouquet_manager.cleanup_expired_cache()
 
 
 def get_tvtap_bouquet_stats():
-    """Restituisce statistiche TVTap bouquet."""
+    """Return TVTap bouquet manager statistics."""
     return tvtap_bouquet_manager.get_stats()
 
 
 if __name__ == "__main__":
-    # Test del bouquet manager
-    print("=== Test TVTap Bouquet Manager ===")
+    # Test TVTap Bouquet Manager
+    print("=== TVTap Bouquet Manager Test ===")
 
-    # Statistiche iniziali
+    # Initial stats
     stats = get_tvtap_bouquet_stats()
-    print(f"Statistiche: {stats}")
+    print(f"Statistics: {stats}")
 
-    # Test risoluzione URL
+    # Test URL resolution
     test_url = "tvtap://850"
-    print(f"\nTest risoluzione: {test_url}")
+    print(f"\nTesting resolution: {test_url}")
 
     resolved = resolve_tvtap_url_with_authsign(test_url, "Rai 1")
-    if resolved:
-        print(f"Risolto: {resolved['resolved_url']}")
-        print(f"Dominio: {resolved['domain']}")
-        print(f"AuthSign: {resolved.get('authsign', 'N/A')}")
-        print(f"Scade: {resolved['expires_at']}")
-    else:
-        print("Risoluzione fallita")
 
-    print("\n=== Test completato ===")
+    if resolved:
+        print(f"Resolved URL: {resolved['resolved_url']}")
+        print(f"Domain: {resolved['domain']}")
+        print(f"AuthSign: {resolved.get('authsign', 'N/A')}")
+        print(f"Expires at: {resolved['expires_at']}")
+    else:
+        print("Resolution failed")
+
+    print("\n=== Test completed ===")
