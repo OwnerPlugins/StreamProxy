@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-TVTap Bouquet Manager - Gestione dinamica canali TVTap basata su bouquet
-Rileva automaticamente i canali TVTap dal bouquet e gestisce authSign dinamici
+TVTap Bouquet Manager - Dynamic management of TVTap channels based on bouquets
+Automatically detects TVTap channels from the bouquet and manages dynamic authSign
 """
 
 import re
@@ -16,25 +16,25 @@ try:
     from .extractor.tvtap_extractor import get_tvtap_stream, get_tvtap_channels, find_channel_by_name
 except ImportError:
     def enhanced_log(message, level="INFO", component="TVTAP_BOUQUET"):
-        print(f"[{level}] [{component}] {message}")
+        print("[%s] [%s] %s" % (level, component, message))
 
-    # Fallback imports se eseguito standalone
+    # Fallback imports if run standalone
     try:
         from extractor.tvtap_extractor import get_tvtap_stream, get_tvtap_channels, find_channel_by_name
     except ImportError:
-        enhanced_log("Impossibile importare tvtap_extractor", "ERROR")
+        enhanced_log("Unable to import tvtap_extractor", "ERROR")
 
 
 class TVTapBouquetManager:
     """
-    Gestore intelligente per canali TVTap basato su analisi bouquet.
+    Intelligent manager for TVTap channels based on bouquet analysis.
 
-    Caratteristiche:
-    - Scansione automatica bouquet per rilevare canali TVTap
-    - Gestione dinamica authSign con refresh automatico
-    - Cache intelligente per URL con scadenza
-    - Rilevamento domini dinamici
-    - Fallback automatici su errori
+    Features:
+    - Automatic bouquet scanning to detect TVTap channels
+    - Dynamic authSign management with automatic refresh
+    - Intelligent URL cache with expiration
+    - Dynamic domain detection
+    - Automatic fallback on errors
     """
 
     def __init__(self):
@@ -44,20 +44,20 @@ class TVTapBouquetManager:
             '/etc/enigma2/*.tv'
         ]
 
-        # Cache canali TVTap rilevati dai bouquet
+        # Cache of TVTap channels detected from bouquets
         self.tvtap_channels = {}  # {service_ref: channel_info}
         self.url_cache = {}       # {original_url: cached_data}
         self.domain_cache = {}    # {domain: last_seen}
 
-        # Lock per thread safety
+        # Lock for thread safety
         self.lock = threading.RLock()
 
-        # Configurazione timing
-        self.authsign_validity = 300  # 5 minuti validità authSign
-        self.refresh_before_expiry = 60  # Refresh 1 minuto prima scadenza
-        self.bouquet_scan_interval = 600  # Scansiona bouquet ogni 10 minuti
+        # Timing configuration
+        self.authsign_validity = 300  # 5 minutes authSign validity
+        self.refresh_before_expiry = 60  # Refresh 1 minute before expiry
+        self.bouquet_scan_interval = 600  # Scan bouquets every 10 minutes
 
-        # Pattern per rilevare canali TVTap
+        # Patterns to detect TVTap channels
         self.tvtap_patterns = [
             r'tvtap://',
             r'tvtap_id:',
@@ -70,7 +70,7 @@ class TVTapBouquetManager:
             r'TVTAP'
         ]
 
-        # Pattern per estrarre authSign
+        # Patterns to extract authSign
         self.authsign_patterns = [
             r'authSign=([^&]+)',
             r'wmsAuthSign=([^&]+)',
@@ -79,15 +79,15 @@ class TVTapBouquetManager:
             r'sig=([^&]+)'
         ]
 
-        # Avvia scansione iniziale
+        # Start initial scan
         self._scan_bouquets()
         self._start_background_scanner()
 
-        enhanced_log("TVTap Bouquet Manager inizializzato", "INFO")
+        enhanced_log("TVTap Bouquet Manager initialised", "INFO")
 
     def _scan_bouquets(self):
-        """Scansiona i bouquet per trovare canali TVTap."""
-        enhanced_log("Inizio scansione bouquet per canali TVTap", "INFO")
+        """Scan bouquets to find TVTap channels."""
+        enhanced_log("Starting bouquet scan for TVTap channels", "INFO")
 
         found_channels = {}
 
@@ -100,31 +100,32 @@ class TVTapBouquetManager:
                         channels = self._parse_bouquet_file(bouquet_file)
                         found_channels.update(channels)
                         enhanced_log(
-                            f"Scansionato bouquet: {bouquet_file} - {len(channels)} canali TVTap", "DEBUG")
+                            "Scanned bouquet: %s - %d TVTap channels" % (bouquet_file, len(channels)),
+                            "DEBUG")
                     except Exception as e:
                         enhanced_log(
-                            f"Errore scansione {bouquet_file}: {e}", "WARNING")
+                            "Error scanning %s: %s" % (bouquet_file, e),
+                            "WARNING")
 
             with self.lock:
                 self.tvtap_channels = found_channels
 
             enhanced_log(
-                f"Scansione completata: {
-                    len(found_channels)} canali TVTap trovati",
+                "Scan completed: %d TVTap channels found" % len(found_channels),
                 "INFO")
 
         except Exception as e:
-            enhanced_log(f"Errore scansione bouquet: {e}", "ERROR")
+            enhanced_log("Bouquet scan error: %s" % e, "ERROR")
 
     def _parse_bouquet_file(self, bouquet_file):
-        """Analizza un file bouquet per trovare canali TVTap."""
+        """Parse a bouquet file to find TVTap channels."""
         channels = {}
 
         try:
             with open(bouquet_file, 'r', encoding='utf-8', errors='ignore') as f:
                 content = f.read()
 
-            # Cerca linee SERVICE
+            # Look for SERVICE lines
             service_lines = re.findall(
                 r'#SERVICE[^\n]*', content, re.IGNORECASE)
 
@@ -135,22 +136,21 @@ class TVTapBouquetManager:
                         service_ref = channel_info['service_ref']
                         channels[service_ref] = channel_info
                         enhanced_log(
-                            f"Canale TVTap trovato: {
-                                channel_info.get(
-                                    'name', 'Unknown')}", "DEBUG")
+                            "TVTap channel found: %s" % channel_info.get('name', 'Unknown'),
+                            "DEBUG")
                 except Exception as e:
-                    enhanced_log(f"Errore parsing linea service: {e}", "DEBUG")
+                    enhanced_log("Error parsing service line: %s" % e, "DEBUG")
 
         except Exception as e:
             enhanced_log(
-                f"Errore lettura bouquet {bouquet_file}: {e}",
+                "Error reading bouquet %s: %s" % (bouquet_file, e),
                 "WARNING")
 
         return channels
 
     def _parse_service_line(self, line):
-        """Analizza una linea SERVICE del bouquet."""
-        # Formato: #SERVICE 4097:0:1:0:0:0:0:0:0:0:URL:NOME
+        """Parse a SERVICE line from the bouquet."""
+        # Format: #SERVICE 4097:0:1:0:0:0:0:0:0:0:URL:NAME
         parts = line.split(':', 10)
 
         if len(parts) < 11:
@@ -161,7 +161,7 @@ class TVTapBouquetManager:
             url_part = parts[10] if len(parts) > 10 else ""
             name_part = parts[11] if len(parts) > 11 else ""
 
-            # Decodifica URL
+            # Decode URL
             if url_part:
                 url_part = unquote(url_part)
 
@@ -176,19 +176,19 @@ class TVTapBouquetManager:
             }
 
         except Exception as e:
-            enhanced_log(f"Errore parsing service line: {e}", "DEBUG")
+            enhanced_log("Error parsing service line: %s" % e, "DEBUG")
             return None
 
     def _is_tvtap_channel(self, channel_info):
-        """Verifica se un canale è di tipo TVTap."""
+        """Check if a channel is of TVTap type."""
         if not channel_info:
             return False
 
-        # Controlla URL
+        # Check URL
         url = channel_info.get('url', '').lower()
         name = channel_info.get('name', '').lower()
 
-        # Verifica pattern TVTap
+        # Check TVTap patterns
         for pattern in self.tvtap_patterns:
             if re.search(
                     pattern,
@@ -227,7 +227,7 @@ class TVTapBouquetManager:
                 'authsign': str
             }
         """
-        enhanced_log(f"Resolving TVTap URL: {original_url[:100]}...", "INFO")
+        enhanced_log("Resolving TVTap URL: %s..." % original_url[:100], "INFO")
 
         with self.lock:
             # Check existing cache
@@ -256,7 +256,7 @@ class TVTapBouquetManager:
 
     def _resolve_fresh_url(self, original_url, channel_name, cache_key):
         """Resolve a fresh TVTap URL."""
-        enhanced_log(f"Resolving fresh TVTap URL: {original_url}", "INFO")
+        enhanced_log("Resolving fresh TVTap URL: %s" % original_url, "INFO")
 
         try:
             # Extract information from original URL
@@ -269,7 +269,6 @@ class TVTapBouquetManager:
                 match = re.search(pattern, original_url)
                 if match:
                     current_authsign = match.group(1)
-                    print(str(current_authsign))
                     break
 
             # Determine TVTap channel ID
@@ -286,7 +285,7 @@ class TVTapBouquetManager:
 
             if not new_stream_url:
                 enhanced_log(
-                    f"Unable to fetch stream for TVTap channel {channel_id}",
+                    "Unable to fetch stream for TVTap channel %s" % channel_id,
                     "ERROR"
                 )
                 return None
@@ -325,15 +324,18 @@ class TVTapBouquetManager:
             self.domain_cache[new_domain] = datetime.now()
 
             enhanced_log(
-                f"TVTap URL resolved: {new_domain} - authSign: {new_authsign[:10] if new_authsign else 'None'}...",
+                "TVTap URL resolved: %s - authSign: %s..." % (
+                    new_domain,
+                    new_authsign[:10] if new_authsign else 'None'
+                ),
                 "INFO"
             )
-            enhanced_log(f"Expiration: {expires_at}", "DEBUG")
+            enhanced_log("Expiration: %s" % expires_at, "DEBUG")
 
             return cache_data
 
         except Exception as e:
-            enhanced_log(f"Error resolving TVTap URL: {e}", "ERROR")
+            enhanced_log("Error resolving TVTap URL: %s" % e, "ERROR")
             return None
 
     def _extract_tvtap_id(self, url, channel_name):
@@ -366,7 +368,7 @@ class TVTapBouquetManager:
                     return found_channel.get('id')
             except Exception as e:
                 enhanced_log(
-                    f"Error while searching channel by name: {e}",
+                    "Error while searching channel by name: %s" % e,
                     "DEBUG"
                 )
 
@@ -422,7 +424,7 @@ class TVTapBouquetManager:
         def refresh_worker():
             try:
                 enhanced_log(
-                    f"Background TVTap refresh: {original_url[:50]}...",
+                    "Background TVTap refresh: %s..." % original_url[:50],
                     "DEBUG"
                 )
 
@@ -443,7 +445,7 @@ class TVTapBouquetManager:
                 self._resolve_fresh_url(original_url, channel_name, cache_key)
 
             except Exception as e:
-                enhanced_log(f"Background refresh error: {e}", "ERROR")
+                enhanced_log("Background refresh error: %s" % e, "ERROR")
 
         thread = threading.Thread(target=refresh_worker, daemon=True)
         thread.start()
@@ -451,7 +453,7 @@ class TVTapBouquetManager:
     def _get_cache_key(self, url):
         """Generate cache key for URL."""
         parsed = urlparse(url)
-        base_url = f"{parsed.scheme}://{parsed.netloc}{parsed.path}"
+        base_url = "%s://%s%s" % (parsed.scheme, parsed.netloc, parsed.path)
         return hashlib.md5(base_url.encode()).hexdigest()
 
     def _start_background_scanner(self):
@@ -462,7 +464,7 @@ class TVTapBouquetManager:
                     time.sleep(self.bouquet_scan_interval)
                     self._scan_bouquets()
                 except Exception as e:
-                    enhanced_log(f"Error in bouquet scanner: {e}", "ERROR")
+                    enhanced_log("Error in bouquet scanner: %s" % e, "ERROR")
 
         scanner_thread = threading.Thread(target=scanner_worker, daemon=True)
         scanner_thread.start()
@@ -504,13 +506,10 @@ class TVTapBouquetManager:
             return None
 
         # Build proxy URL
-        proxy_url = f"{base_proxy_url}/proxy/m3u?url={quote(resolved_url)}"
+        proxy_url = "%s/proxy/m3u?url=%s" % (base_proxy_url, quote(resolved_url))
 
         enhanced_log(
-            f"TVTap proxy URL generated for: {
-                channel_info.get(
-                    'name',
-                    'Unknown')}",
+            "TVTap proxy URL generated for: %s" % channel_info.get('name', 'Unknown'),
             "DEBUG")
 
         return proxy_url
@@ -529,7 +528,7 @@ class TVTapBouquetManager:
 
             if expired_keys:
                 enhanced_log(
-                    f"Removed {len(expired_keys)} expired TVTap cache entries",
+                    "Removed %d expired TVTap cache entries" % len(expired_keys),
                     "INFO"
                 )
 
@@ -561,7 +560,7 @@ class TVTapBouquetManager:
                     urls_to_refresh.append((original_url, key))
 
             enhanced_log(
-                f"Forcing refresh for {len(urls_to_refresh)} TVTap URLs",
+                "Forcing refresh for %d TVTap URLs" % len(urls_to_refresh),
                 "INFO"
             )
 
@@ -570,7 +569,7 @@ class TVTapBouquetManager:
                     self._resolve_fresh_url(original_url, None, cache_key)
                 except Exception as e:
                     enhanced_log(
-                        f"Error refreshing {original_url}: {e}",
+                        "Error refreshing %s: %s" % (original_url, e),
                         "ERROR"
                     )
 
@@ -580,7 +579,7 @@ tvtap_bouquet_manager = TVTapBouquetManager()
 
 def is_tvtap_service_reference(service_ref):
     """
-    Verifica se un service reference è un canale TVTap.
+    Check if a service reference is a TVTap channel.
     """
     return tvtap_bouquet_manager.is_tvtap_service_ref(service_ref)
 
@@ -623,19 +622,19 @@ if __name__ == "__main__":
 
     # Initial stats
     stats = get_tvtap_bouquet_stats()
-    print(f"Statistics: {stats}")
+    print("Statistics: %s" % stats)
 
     # Test URL resolution
     test_url = "tvtap://850"
-    print(f"\nTesting resolution: {test_url}")
+    print("\nTesting resolution: %s" % test_url)
 
     resolved = resolve_tvtap_url_with_authsign(test_url, "Rai 1")
 
     if resolved:
-        print(f"Resolved URL: {resolved['resolved_url']}")
-        print(f"Domain: {resolved['domain']}")
-        print(f"AuthSign: {resolved.get('authsign', 'N/A')}")
-        print(f"Expires at: {resolved['expires_at']}")
+        print("Resolved URL: %s" % resolved['resolved_url'])
+        print("Domain: %s" % resolved['domain'])
+        print("AuthSign: %s" % resolved.get('authsign', 'N/A'))
+        print("Expires at: %s" % resolved['expires_at'])
     else:
         print("Resolution failed")
 
