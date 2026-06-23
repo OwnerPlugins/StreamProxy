@@ -116,11 +116,7 @@ def convert_fmp4_to_ts(fmp4_content, stream_id=None):
                     "WARNING",
                     "proxy_ts")
 
-        enhanced_log(
-            f"🔄 [FMP4_CONVERT] Processamento {
-                len(fmp4_content)} bytes fMP4",
-            "DEBUG",
-            "proxy_ts")
+        enhanced_log(f"🔄 [FMP4_CONVERT] Processamento {len(fmp4_content)} bytes fMP4")
 
         # ✅ SOLUZIONE CRITICA: Per Freeshot, invia SEMPRE fMP4 diretto
         # Enigma2 moderno gestisce fMP4 nativamente meglio della conversione TS
@@ -631,11 +627,7 @@ def decrypt_ts_if_needed(ts_content, stream_id, headers, segment_url=None):
         "INFO",
         "AppCore")
 
-    # ✅ CORREZIONE: Non saltare la decrittazione anche se sync byte è 0x47
-    # Alcuni segmenti DLHD potrebbero avere 0x47 ma essere comunque criptati
-
     try:
-        # Ottieni info stream
         stream_info = STREAM_KEY_INFO.get(stream_id, {})
         if not stream_info:
             enhanced_log(
