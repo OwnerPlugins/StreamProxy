@@ -1,11 +1,10 @@
 # StreamProxySetup.py
 from Screens.Screen import Screen
 from Components.ConfigList import ConfigListScreen
-from Components.Label import Label
 from Components.Button import Button
 from Components.ActionMap import ActionMap
 from Components.config import config, getConfigListEntry
-from enigma import ePoint
+
 from . import proxy_manager
 from . import _
 

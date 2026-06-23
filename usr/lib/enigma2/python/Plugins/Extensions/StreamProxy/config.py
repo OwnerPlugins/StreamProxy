@@ -15,11 +15,11 @@ def initConfig():
     config.plugins.streamproxy.custom_useragent = ConfigText(
         default="Enigma2 StreamProxy")
     config.plugins.streamproxy.show_log = ConfigYesNo(
-        default=True)  # Modificato a True
+        default=True)
     config.plugins.streamproxy.log_max_lines = ConfigInteger(
-        default=5000, limits=(100, 10000))  # Aumentato il limite
+        default=5000, limits=(100, 10000))
     config.plugins.streamproxy.debug_mode = ConfigYesNo(
-        default=True)  # Aggiunto debug mode
+        default=True)
     config.plugins.streamproxy.cache_dir = ConfigText(
         default="/tmp/streamproxy_cache")
     config.plugins.streamproxy.save()

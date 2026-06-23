@@ -1,11 +1,11 @@
-# cache_manager.py - Gestione centralizzata delle cache per StreamProxy
+# cache_manager.py - Centralized cache management for StreamProxy
 import time
 import threading
 from .StreamProxyLog import enhanced_log
 
 
 class SimpleTTLCache(dict):
-    """Cache con Time-To-Live per i file M3U8"""
+    """Time-To-Live cache for M3U8 files"""
 
     def __init__(
             self,
@@ -17,9 +17,9 @@ class SimpleTTLCache(dict):
         self.maxsize = maxsize
         self.ttl = ttl
         self._timestamps = {}
-        self._sizes = {}  # Traccia la dimensione di ogni elemento
-        self._total_size = 0  # Dimensione totale in bytes
-        self._max_memory = max_memory_mb * 1024 * 1024  # Limite di memoria in bytes
+        self._sizes = {}  # Tracks the size of each item
+        self._total_size = 0  # Total size in bytes
+        self._max_memory = max_memory_mb * 1024 * 1024  # Memory limit in bytes
         self._lock = threading.RLock()
         self._cleanup_interval = cleanup_interval
         self._cleanup_thread = threading.Thread(
@@ -28,32 +28,31 @@ class SimpleTTLCache(dict):
 
     def __setitem__(self, key, value):
         with self._lock:
-            # Calcola la dimensione del valore
-            # Dimensione stimata per oggetti non stringhe
+            # Estimate the size of the value
             value_size = len(value) if isinstance(value, (bytes, str)) else 512
 
-            # Se l'elemento esiste già, sottrai la sua dimensione attuale
+            # If the item already exists, subtract its current size
             if dict.__contains__(self, key):
                 self._total_size -= self._sizes.get(key, 0)
 
-            # Verifica se l'aggiunta supererebbe il limite di memoria
+            # Check if adding would exceed the memory limit
             if self._total_size + value_size > self._max_memory:
                 self._evict_by_memory(value_size)
 
-            # Verifica se l'aggiunta supererebbe il limite di elementi
+            # Check if adding would exceed the maximum number of items
             if len(self) >= self.maxsize and not dict.__contains__(self, key):
                 self._evict_oldest()
 
-            # Aggiorna cache, timestamp e dimensione
+            # Update cache, timestamp and size
             super().__setitem__(key, value)
             self._timestamps[key] = time.time()
             self._sizes[key] = value_size
             self._total_size += value_size
 
     def _evict_by_memory(self, needed_space):
-        # Rimuovi elementi fino a liberare lo spazio necessario
+        # Remove items until enough space is freed
         while self._total_size + needed_space > self._max_memory * \
-                0.9 and self:  # Mantieni 10% di margine
+                0.9 and self:  # Keep 10% margin
             oldest = min(
                 self._timestamps,
                 key=self._timestamps.get) if self._timestamps else None
@@ -63,7 +62,7 @@ class SimpleTTLCache(dict):
 
     def __getitem__(self, key):
         with self._lock:
-            # Verifica se la chiave esiste e non è scaduta
+            # Check if the key exists and is not expired
             if dict.__contains__(
                 self,
                 key) and (
@@ -72,13 +71,13 @@ class SimpleTTLCache(dict):
                     key,
                     0)) < self.ttl:
                 return dict.__getitem__(self, key)
-            # Se la chiave è scaduta o non esiste, rimuovila e solleva KeyError
+            # If the key is expired or does not exist, remove it and raise KeyError
             self._safe_remove(key)
             raise KeyError(key)
 
     def __contains__(self, key):
         with self._lock:
-            # Verifica se la chiave esiste e non è scaduta
+            # Check if the key exists and is not expired
             if dict.__contains__(
                 self,
                 key) and (
@@ -87,12 +86,12 @@ class SimpleTTLCache(dict):
                     key,
                     0)) < self.ttl:
                 return True
-            # Se la chiave è scaduta, rimuovila
+            # If the key is expired, remove it
             self._safe_remove(key)
             return False
 
     def _evict_oldest(self):
-        # Rimuove gli elementi più vecchi o scaduti
+        # Remove the oldest or expired items
         expired = [
             k for k,
             t in self._timestamps.items() if (
@@ -100,25 +99,25 @@ class SimpleTTLCache(dict):
                 t) >= self.ttl]
         for k in expired:
             self._safe_remove(k)
-        # Se ancora necessario, rimuovi il più vecchio
+        # If still needed, remove the oldest one
         if len(self) >= self.maxsize and self._timestamps:
             oldest = min(self._timestamps, key=self._timestamps.get)
             self._safe_remove(oldest)
 
     def _safe_remove(self, key):
-        # Rimuove in sicurezza una chiave e aggiorna la dimensione totale
+        # Safely remove a key and update the total size
         if dict.__contains__(self, key):
             self._total_size -= self._sizes.pop(key, 0)
             dict.pop(self, key, None)
             self._timestamps.pop(key, None)
 
     def _periodic_cleanup(self):
-        """Esegue la pulizia periodica della cache in un thread separato."""
+        """Run periodic cache cleanup in a separate thread."""
         while True:
             try:
                 time.sleep(self._cleanup_interval)
                 with self._lock:
-                    # Rimuove gli elementi scaduti
+                    # Remove expired items
                     now = time.time()
                     expired = [
                         k for k, t in self._timestamps.items() if (
@@ -126,32 +125,31 @@ class SimpleTTLCache(dict):
                     for k in expired:
                         self._safe_remove(k)
 
-                    # Controlla se la memoria è oltre il 90% del limite
+                    # Check if memory usage is above 90% of the limit
                     if self._total_size > self._max_memory * 0.9:
-                        # Rimuovi elementi fino a scendere sotto l'80% del
-                        # limite
+                        # Remove items until usage drops below 80%
                         while self._total_size > self._max_memory * 0.8 and self._timestamps:
                             oldest = min(
                                 self._timestamps, key=self._timestamps.get)
                             self._safe_remove(oldest)
 
-                    # Controlla se il numero di elementi è oltre il limite
+                    # Check if the number of items exceeds the limit
                     while len(self) > self.maxsize and self._timestamps:
                         oldest = min(
                             self._timestamps, key=self._timestamps.get)
                         self._safe_remove(oldest)
             except Exception as e:
-                # Cattura eventuali eccezioni per evitare che il thread di
-                # pulizia si interrompa
+                # Catch any exceptions to prevent the cleanup thread from stopping
                 enhanced_log(
-                    f"Errore durante la pulizia della cache TTL: {
-                        str(e)}", "ERROR", "CACHE")
-                # Breve pausa prima di riprovare
+                    "Error during TTL cache cleanup: %s" % str(e),
+                    "ERROR",
+                    "CACHE")
+                # Short pause before retrying
                 time.sleep(5)
 
 
 class SimpleLRUCache(dict):
-    """Cache LRU (Least Recently Used) per segmenti TS e chiavi"""
+    """LRU (Least Recently Used) cache for TS segments and keys"""
 
     def __init__(self, maxsize=1000, cleanup_interval=120):
         super().__init__()
@@ -168,13 +166,12 @@ class SimpleLRUCache(dict):
             if dict.__contains__(self, key):
                 self._order.remove(key)
             elif len(self) >= self.maxsize:
-                # Rimuovi elementi non più in cache per consistenza prima
-                # dell'evizione
+                # Remove items no longer in the cache for consistency before eviction
                 self._order = [k for k in self._order if k in self]
-                if self._order:  # Solo se ci sono elementi rimossi correttamente
+                if self._order:  # Only if there are correctly removed items
                     oldest = self._order.pop(0)
                     self.pop(oldest, None)
-                else:  # Se la cache è vuota e tentiamo di evincere, evitiamo KeyError
+                else:  # If the cache is empty and we try to evict, avoid KeyError
                     pass
             dict.__setitem__(self, key, value)
             self._order.append(key)
@@ -195,17 +192,17 @@ class SimpleLRUCache(dict):
         while True:
             time.sleep(self._cleanup_interval)
             with self._lock:
-                # Rimuove eventuali chiavi orfane nell'ordine
+                # Remove any orphaned keys from the order
                 self._order = [k for k in self._order if k in self]
-                # Se la cache è troppo grande, evict
+                # If the cache is too large, evict
                 while len(self) > self.maxsize:
-                    if not self._order:  # Evita errore se l'ordine è vuoto
+                    if not self._order:  # Avoid error if order is empty
                         break
                     oldest = self._order.pop(0)
                     self.pop(oldest, None)
 
 
-# Istanze globali delle cache
+# Global cache instances
 M3U8_CACHE = SimpleTTLCache(maxsize=200, ttl=5)
 TS_CACHE = SimpleLRUCache(maxsize=1000)
 KEY_CACHE = SimpleLRUCache(maxsize=200)

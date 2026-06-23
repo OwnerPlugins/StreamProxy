@@ -2,7 +2,6 @@
 
 from .StreamProxyLog import StreamProxyLogger, enhanced_log
 import os
-import time
 
 logger = StreamProxyLogger.getInstance()
 
