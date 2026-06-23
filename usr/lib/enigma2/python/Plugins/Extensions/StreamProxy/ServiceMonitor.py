@@ -145,10 +145,10 @@ class StreamProxyServiceMonitor:
 
                 except Exception as e:
                     enhanced_log(
-                        "ChannelSelection showAllServices hook error: " + str(e),
+                        "ChannelSelection showAllServices hook error: " +
+                        str(e),
                         "DEBUG",
-                        "ServiceMonitor"
-                    )
+                        "ServiceMonitor")
 
                 return ret
 
@@ -167,8 +167,7 @@ class StreamProxyServiceMonitor:
                                 if self.proxy_active and self.last_original_ref:
                                     timer = eTimer()
                                     timer.callback.append(
-                                        lambda: self._fix_url_channel_selection(inst)
-                                    )
+                                        lambda: self._fix_url_channel_selection(inst))
                                     timer.start(100, True)
 
                             except Exception as e:
@@ -309,9 +308,7 @@ class StreamProxyServiceMonitor:
                                 servicelist.moveToIndex(start_pos)
 
                                 enhanced_log(
-                                    "⚠️ Channel not found, keeping current position",
-                                    "WARNING"
-                                )
+                                    "⚠️ Channel not found, keeping current position", "WARNING")
 
                 except Exception as e:
                     enhanced_log(
@@ -369,8 +366,8 @@ class StreamProxyServiceMonitor:
             # EXTERNAL PLUGIN PROXY URL HANDLING
             if self._is_proxy_ref_string(ref_str):
                 enhanced_log(
-                    "🔄 [SERVICEMONITOR] Service already detected as proxied", "DEBUG"
-                )
+                    "🔄 [SERVICEMONITOR] Service already detected as proxied",
+                    "DEBUG")
 
                 # Extract original URL from proxy if possible
                 original_url = self._extract_original_url_from_proxy(ref_str)
@@ -385,13 +382,14 @@ class StreamProxyServiceMonitor:
 
                     # Save channel info
                     parts = ref_str.split(":")
-                    channel_name = ":".join(parts[11:]) if len(parts) > 11 else "External Plugin Stream"
-                    self._save_channel_info(ref_str, original_url, channel_name)
+                    channel_name = ":".join(parts[11:]) if len(
+                        parts) > 11 else "External Plugin Stream"
+                    self._save_channel_info(
+                        ref_str, original_url, channel_name)
                 else:
                     enhanced_log(
                         "⚠️ [SERVICEMONITOR] External plugin proxy without original URL",
-                        "WARNING"
-                    )
+                        "WARNING")
                     self.proxy_active = True
 
                 return self._call_orig_playService(
@@ -399,10 +397,8 @@ class StreamProxyServiceMonitor:
                 )
 
             parts = ref_str.split(":")
-            enhanced_log(
-                "🔍 [SERVICEMONITOR] Service parts: " + str(len(parts)) + " elements",
-                "DEBUG"
-            )
+            enhanced_log("🔍 [SERVICEMONITOR] Service parts: " +
+                         str(len(parts)) + " elements", "DEBUG")
 
             # Handle references with #EXTVLCOPT
             url_part = ""
@@ -411,43 +407,44 @@ class StreamProxyServiceMonitor:
             if len(parts) > 10:
                 url_part = parts[10]
 
-                # If part 10 contains #EXTVLCOPT, look for URL in subsequent parts
+                # If part 10 contains #EXTVLCOPT, look for URL in subsequent
+                # parts
                 if url_part.startswith("#EXTVLCOPT"):
                     enhanced_log(
-                        "🔍 [SERVICEMONITOR] Detected #EXTVLCOPT format", "DEBUG"
-                    )
+                        "🔍 [SERVICEMONITOR] Detected #EXTVLCOPT format", "DEBUG")
 
-                    # Search for URL in following parts (may be in 11, 12, etc.)
+                    # Search for URL in following parts (may be in 11, 12,
+                    # etc.)
                     found_url = False
 
                     for i in range(11, len(parts)):
                         part = unquote(parts[i])
 
                         # Check if the part contains a valid URL
-                        if part.startswith("http://") or part.startswith("https://"):
+                        if part.startswith(
+                                "http://") or part.startswith("https://"):
                             url_part = parts[i]
-                            channel_name = ":".join(parts[i + 1:]) if i + 1 < len(parts) else ""
+                            channel_name = ":".join(
+                                parts[i + 1:]) if i + 1 < len(parts) else ""
                             found_url = True
 
                             enhanced_log(
-                                "✅ [SERVICEMONITOR] URL found at part " + str(i),
-                                "DEBUG"
-                            )
+                                "✅ [SERVICEMONITOR] URL found at part " + str(i), "DEBUG")
                             break
 
                     if not found_url:
                         # #EXTVLCOPT reference without stream URL - IGNORE and continue
                         enhanced_log(
                             "⚠️ [SERVICEMONITOR] #EXTVLCOPT reference without stream URL, ignored",
-                            "WARNING"
-                        )
+                            "WARNING")
                         self._reset_proxy_state()
                         return self._call_orig_playService(
                             ref, checkParentalControl, forceRestart, adjust
                         )
 
                 else:
-                    channel_name = ":".join(parts[11:]) if len(parts) > 11 else ""
+                    channel_name = ":".join(
+                        parts[11:]) if len(parts) > 11 else ""
 
             enhanced_log(
                 "🔍 [SERVICEMONITOR] URL part: " + url_part[:150] + "...",
@@ -475,12 +472,11 @@ class StreamProxyServiceMonitor:
             # Check if it's already a proxy URL (external plugin) - HANDLE HLS
             if self._is_already_proxy_url(clean_url):
                 enhanced_log(
-                    "✅ [SERVICEMONITOR] URL already proxied by external plugin",
-                    "INFO"
-                )
+                    "✅ [SERVICEMONITOR] URL already proxied by external plugin", "INFO")
 
                 # Extract original m3u8 URL
-                original_url = self._extract_original_url_from_proxy_url(clean_url)
+                original_url = self._extract_original_url_from_proxy_url(
+                    clean_url)
                 if original_url:
                     enhanced_log(
                         "🔍 [SERVICEMONITOR] Original m3u8 URL: " + original_url[:100] + "...",
@@ -492,7 +488,8 @@ class StreamProxyServiceMonitor:
                     self.proxy_active = True
                     self.last_original_ref = ref
 
-                    self._save_channel_info(ref_str, original_url, channel_name)
+                    self._save_channel_info(
+                        ref_str, original_url, channel_name)
 
                     # Create reference with original m3u8 URL for HLS handling
                     prefix = ":".join(parts[0:10])
@@ -508,9 +505,7 @@ class StreamProxyServiceMonitor:
                     m3u8_ref = eServiceReference(new_service_str)
 
                     enhanced_log(
-                        "🎬 [SERVICEMONITOR] Created m3u8 reference for HLS handling",
-                        "INFO"
-                    )
+                        "🎬 [SERVICEMONITOR] Created m3u8 reference for HLS handling", "INFO")
 
                     return self._call_orig_playService(
                         m3u8_ref,
@@ -523,8 +518,7 @@ class StreamProxyServiceMonitor:
                     # Fallback: passthrough if URL extraction fails
                     enhanced_log(
                         "⚠️ [SERVICEMONITOR] Unable to extract URL, passthrough",
-                        "WARNING"
-                    )
+                        "WARNING")
 
                     self.proxy_active = True
                     self.last_original_ref = ref
@@ -554,9 +548,9 @@ class StreamProxyServiceMonitor:
             # Specific log for powerset
             if "powerset" in clean_url.lower():
                 enhanced_log(
-                    "🎯 [SERVICEMONITOR] POWERSET channel detected: " + clean_url,
-                    "INFO"
-                )
+                    "🎯 [SERVICEMONITOR] POWERSET channel detected: " +
+                    clean_url,
+                    "INFO")
                 enhanced_log(
                     "🎯 [SERVICEMONITOR] Channel name: " + channel_name,
                     "INFO"
@@ -567,7 +561,11 @@ class StreamProxyServiceMonitor:
             url_lower = clean_url.lower()
 
             # VIX handling (separate audio/video streams)
-            if any(vix_domain in url_lower for vix_domain in ['vix', 'vixcloud', 'vixsrc']):
+            if any(
+                vix_domain in url_lower for vix_domain in [
+                    'vix',
+                    'vixcloud',
+                    'vixsrc']):
                 enhanced_log(
                     "🎯 [SERVICEMONITOR] VIX channel detected: " + clean_url,
                     "INFO"
@@ -585,9 +583,9 @@ class StreamProxyServiceMonitor:
                     self._clear_ts_cache()
                 except Exception as e:
                     enhanced_log(
-                        "⚠️ [SERVICEMONITOR] Error clearing VIX cache: " + str(e),
-                        "WARNING"
-                    )
+                        "⚠️ [SERVICEMONITOR] Error clearing VIX cache: " +
+                        str(e),
+                        "WARNING")
 
             # DADDY handling - ONLY local stream cache cleanup (NOT DLHD cache)
             elif any(d in url_lower for d in ['thedaddy', 'daddy', 'dlhd', 'newkso.ru']):
@@ -633,9 +631,7 @@ class StreamProxyServiceMonitor:
                     prefetch_vavoo_m3u8(clean_url)
 
                     enhanced_log(
-                        "🧹 [SERVICEMONITOR] VAVOO caches cleared and prefetch started",
-                        "INFO"
-                    )
+                        "🧹 [SERVICEMONITOR] VAVOO caches cleared and prefetch started", "INFO")
                 except Exception as e:
                     enhanced_log(
                         "⚠️ [SERVICEMONITOR] VAVOO cache error: " + str(e),
@@ -653,9 +649,9 @@ class StreamProxyServiceMonitor:
                     clear_stream_cache()
                 except Exception as e:
                     enhanced_log(
-                        "⚠️ [SERVICEMONITOR] DLHD cache clearing error: " + str(e),
-                        "WARNING"
-                    )
+                        "⚠️ [SERVICEMONITOR] DLHD cache clearing error: " +
+                        str(e),
+                        "WARNING")
 
             # NEWKSO handling
             elif 'newkso.ru' in url_lower:
@@ -668,29 +664,27 @@ class StreamProxyServiceMonitor:
                     clear_stream_cache()
                 except Exception as e:
                     enhanced_log(
-                        "⚠️ [SERVICEMONITOR] NEWKSO cache clearing error: " + str(e),
-                        "WARNING"
-                    )
+                        "⚠️ [SERVICEMONITOR] NEWKSO cache clearing error: " +
+                        str(e),
+                        "WARNING")
 
             # Sport99 / CDNLiveTV handling
             if SPORT99_AVAILABLE and is_sport99_link(clean_url):
                 enhanced_log(
-                    "[SERVICEMONITOR] Sport99/CDNLiveTV channel detected: " + clean_url,
-                    "INFO"
-                )
+                    "[SERVICEMONITOR] Sport99/CDNLiveTV channel detected: " +
+                    clean_url,
+                    "INFO")
                 try:
                     from .AppCore import clear_stream_cache()
                     clear_stream_cache()
 
                     enhanced_log(
-                        "[SERVICEMONITOR] Local stream cache cleared for Sport99",
-                        "INFO"
-                    )
+                        "[SERVICEMONITOR] Local stream cache cleared for Sport99", "INFO")
                 except Exception as e:
                     enhanced_log(
-                        "[SERVICEMONITOR] Sport99 cache clearing error: " + str(e),
-                        "WARNING"
-                    )
+                        "[SERVICEMONITOR] Sport99 cache clearing error: " +
+                        str(e),
+                        "WARNING")
 
             # Freeshot handling
             freeshot_proxy_url = None
@@ -699,14 +693,16 @@ class StreamProxyServiceMonitor:
                 # Freeshot channel handling (popcdn.day)
                 if FREESHOT_AVAILABLE and is_freeshot_link(clean_url):
                     enhanced_log(
-                        "🎯 [SERVICEMONITOR] Freeshot channel detected: " + channel_name,
-                        "INFO"
-                    )
+                        "🎯 [SERVICEMONITOR] Freeshot channel detected: " +
+                        channel_name,
+                        "INFO")
 
                     try:
-                        resolved_freeshot = freeshot_extractor.extract(clean_url)
+                        resolved_freeshot = freeshot_extractor.extract(
+                            clean_url)
 
-                        if resolved_freeshot and resolved_freeshot.get('resolved_url'):
+                        if resolved_freeshot and resolved_freeshot.get(
+                                'resolved_url'):
                             enhanced_log(
                                 "✅ [SERVICEMONITOR] Freeshot resolved: " +
                                 resolved_freeshot['resolved_url'],
@@ -725,14 +721,10 @@ class StreamProxyServiceMonitor:
                                 clear_stream_cache()
 
                                 enhanced_log(
-                                    "🧹 [SERVICEMONITOR] Cache cleared for Freeshot (fMP4)",
-                                    "INFO"
-                                )
+                                    "🧹 [SERVICEMONITOR] Cache cleared for Freeshot (fMP4)", "INFO")
                             except Exception as cache_e:
                                 enhanced_log(
-                                    "⚠️ [SERVICEMONITOR] Freeshot cache error: " + str(cache_e),
-                                    "WARNING"
-                                )
+                                    "⚠️ [SERVICEMONITOR] Freeshot cache error: " + str(cache_e), "WARNING")
 
                             # Create proxy URL with custom headers
                             headers_query = "&".join(
@@ -750,20 +742,16 @@ class StreamProxyServiceMonitor:
                             )
 
                             enhanced_log(
-                                "✅ [SERVICEMONITOR] Freeshot proxy URL created (fMP4 support)",
-                                "INFO"
-                            )
+                                "✅ [SERVICEMONITOR] Freeshot proxy URL created (fMP4 support)", "INFO")
 
                             enhanced_log(
-                                "🔍 [SERVICEMONITOR] Full proxy URL: " + freeshot_proxy_url,
-                                "DEBUG"
-                            )
+                                "🔍 [SERVICEMONITOR] Full proxy URL: " +
+                                freeshot_proxy_url,
+                                "DEBUG")
 
                     except Exception as e:
                         enhanced_log(
-                            "❌ [SERVICEMONITOR] Freeshot resolution error: " + str(e),
-                            "ERROR"
-                        )
+                            "❌ [SERVICEMONITOR] Freeshot resolution error: " + str(e), "ERROR")
                         freeshot_proxy_url = None
 
             except Exception as e:
@@ -780,9 +768,9 @@ class StreamProxyServiceMonitor:
             # TVTap WMS channels (stream.mardio.link with wmsAuthSign)
             if TVTAP_WMS_AVAILABLE and is_wms_tvtap_url(clean_url):
                 enhanced_log(
-                    "🎯 [SERVICEMONITOR] TVTap WMS channel detected: " + channel_name,
-                    "INFO"
-                )
+                    "🎯 [SERVICEMONITOR] TVTap WMS channel detected: " +
+                    channel_name,
+                    "INFO")
 
                 tvtap_proxy_url = get_wms_proxy_url(clean_url, channel_name)
 
@@ -792,10 +780,12 @@ class StreamProxyServiceMonitor:
                         "INFO"
                     )
 
-                    resolved_data = resolve_wms_tvtap_url(clean_url, channel_name)
+                    resolved_data = resolve_wms_tvtap_url(
+                        clean_url, channel_name)
 
                     if resolved_data and resolved_data.get('decoded_info'):
-                        valid_minutes = resolved_data['decoded_info'].get('valid_minutes', 'N/A')
+                        valid_minutes = resolved_data['decoded_info'].get(
+                            'valid_minutes', 'N/A')
 
                         enhanced_log(
                             "🔑 [SERVICEMONITOR] wmsAuthSign valid for: " +
@@ -807,9 +797,9 @@ class StreamProxyServiceMonitor:
             # Standard TVTap handling
             elif any(pattern in clean_url.lower() for pattern in ['tvtap', 'rocktalk.net', 'taptube.net', 'authsign=']):
                 enhanced_log(
-                    "🎯 [SERVICEMONITOR] Standard TVTap URL detected: " + clean_url,
-                    "INFO"
-                )
+                    "🎯 [SERVICEMONITOR] Standard TVTap URL detected: " +
+                    clean_url,
+                    "INFO")
 
                 tvtap_proxy_url = (
                     "http://127.0.0.1:7860/proxy/m3u?url=" + quote(clean_url)
@@ -827,13 +817,13 @@ class StreamProxyServiceMonitor:
             )
             tvtap_proxy_url = None
 
-
         # Save original ref
         self.last_original_ref = ref
         self.proxy_active = True
         self._save_channel_info(ref_str, clean_url, channel_name)
 
-        # Use resolved Freeshot URL if available, otherwise TVTap, otherwise determine proxy type
+        # Use resolved Freeshot URL if available, otherwise TVTap, otherwise
+        # determine proxy type
         if freeshot_proxy_url:
             proxy_url = freeshot_proxy_url
             enhanced_log(
@@ -877,7 +867,6 @@ class StreamProxyServiceMonitor:
                 "✅ [SERVICEMONITOR] Created proxy URL: " + proxy_url,
                 "INFO"
             )
-
 
         prefix = ":".join(parts[0:10])
         safe_name = channel_name or "Stream Proxy"
@@ -932,9 +921,9 @@ class StreamProxyServiceMonitor:
 
         except Exception as e:
             enhanced_log(
-                "⚠️ [SERVICEMONITOR] Fallback to standard Enigma2 configuration: " + str(e),
-                "WARNING"
-            )
+                "⚠️ [SERVICEMONITOR] Fallback to standard Enigma2 configuration: " +
+                str(e),
+                "WARNING")
             self._playservice_signature = 4
 
     def _call_orig_playService(
@@ -1004,9 +993,7 @@ class StreamProxyServiceMonitor:
                 try:
                     # Fallback: only ref + checkParentalControl (OpenPLi style)
                     enhanced_log(
-                        "🔄 [SERVICEMONITOR] Fallback to playService with 2 parameters",
-                        "DEBUG"
-                    )
+                        "🔄 [SERVICEMONITOR] Fallback to playService with 2 parameters", "DEBUG")
 
                     self._playservice_signature = 2  # Cache for future calls
 
@@ -1018,9 +1005,7 @@ class StreamProxyServiceMonitor:
                     try:
                         # Final fallback: only ref (very old versions)
                         enhanced_log(
-                            "🔄 [SERVICEMONITOR] Fallback to playService with 1 parameter",
-                            "DEBUG"
-                        )
+                            "🔄 [SERVICEMONITOR] Fallback to playService with 1 parameter", "DEBUG")
 
                         self._playservice_signature = 1  # Cache for future calls
 
@@ -1028,15 +1013,15 @@ class StreamProxyServiceMonitor:
 
                     except Exception as final_e:
                         enhanced_log(
-                            "❌ [SERVICEMONITOR] All fallbacks failed: " + str(final_e),
-                            "ERROR"
-                        )
+                            "❌ [SERVICEMONITOR] All fallbacks failed: " +
+                            str(final_e),
+                            "ERROR")
                         return False
             else:
                 enhanced_log(
-                    "❌ [SERVICEMONITOR] Unhandled playService error: " + str(e),
-                    "ERROR"
-                )
+                    "❌ [SERVICEMONITOR] Unhandled playService error: " +
+                    str(e),
+                    "ERROR")
                 return False
 
         except Exception as e:
@@ -1067,7 +1052,6 @@ class StreamProxyServiceMonitor:
                 "DEBUG"
             )
 
-
     def _set_current_selection_alternative(self, proxy_ref):
         """Set alternative selection for UI compatibility"""
         try:
@@ -1084,16 +1068,13 @@ class StreamProxyServiceMonitor:
                         current.setCurrentSelectionAlternative(proxy_ref)
 
                         enhanced_log(
-                            "🎯 [SERVICEMONITOR] setCurrentSelectionAlternative set",
-                            "DEBUG"
-                        )
+                            "🎯 [SERVICEMONITOR] setCurrentSelectionAlternative set", "DEBUG")
 
         except Exception as e:
             enhanced_log(
-                "⚠️ [SERVICEMONITOR] setCurrentSelectionAlternative error: " + str(e),
-                "DEBUG"
-            )
-
+                "⚠️ [SERVICEMONITOR] setCurrentSelectionAlternative error: " +
+                str(e),
+                "DEBUG")
 
     def _should_proxy(self, url: str) -> bool:
         """Check if URL requires proxy - ONLY authorized domains"""
@@ -1105,7 +1086,8 @@ class StreamProxyServiceMonitor:
         domain_part = ""
 
         try:
-            if url_lower.startswith("http://") or url_lower.startswith("https://"):
+            if url_lower.startswith(
+                    "http://") or url_lower.startswith("https://"):
                 url_without_protocol = url_lower.split("://", 1)[1]
                 domain_part = url_without_protocol.split("/")[0]
 
@@ -1142,19 +1124,20 @@ class StreamProxyServiceMonitor:
             matched_vix = [d for d in vix_domains if d in domain_part][0]
 
             enhanced_log(
-                "✅ [SERVICEMONITOR] Authorized VIX domain detected: " + matched_vix,
-                "DEBUG"
-            )
+                "✅ [SERVICEMONITOR] Authorized VIX domain detected: " +
+                matched_vix,
+                "DEBUG")
             return True
 
         # Check other authorized domains in full URL
         if any(domain in url_lower for domain in authorized_domains):
-            matched_domain = [d for d in authorized_domains if d in url_lower][0]
+            matched_domain = [
+                d for d in authorized_domains if d in url_lower][0]
 
             enhanced_log(
-                "✅ [SERVICEMONITOR] Authorized domain detected in URL: " + matched_domain,
-                "DEBUG"
-            )
+                "✅ [SERVICEMONITOR] Authorized domain detected in URL: " +
+                matched_domain,
+                "DEBUG")
             return True
 
         # All other URLs are NOT proxied
@@ -1181,7 +1164,6 @@ class StreamProxyServiceMonitor:
             and "/proxy" in url_lower
         )
 
-
     def _extract_original_url_from_proxy_url(self, proxy_url: str) -> str:
         """Extract original URL from proxy URL (format: http://127.0.0.1:7860/proxy?url=...)"""
 
@@ -1202,11 +1184,10 @@ class StreamProxyServiceMonitor:
 
         except Exception as e:
             enhanced_log(
-                "❌ [SERVICEMONITOR] Error extracting URL from proxy URL: " + str(e),
-                "ERROR"
-            )
+                "❌ [SERVICEMONITOR] Error extracting URL from proxy URL: " +
+                str(e),
+                "ERROR")
             return None
-
 
     def _extract_original_url_from_proxy(self, ref_str: str) -> str:
         """Extract original URL from proxy reference (external plugins)"""
@@ -1249,11 +1230,10 @@ class StreamProxyServiceMonitor:
 
         except Exception as e:
             enhanced_log(
-                "❌ [SERVICEMONITOR] Error extracting URL from proxy: " + str(e),
-                "ERROR"
-            )
+                "❌ [SERVICEMONITOR] Error extracting URL from proxy: " +
+                str(e),
+                "ERROR")
             return None
-
 
     def _force_exteplayer3_for_mpd(self, ref, mpd_url):
         """Force exteplayer3 usage for MPD/DASH streams"""
@@ -1270,8 +1250,7 @@ class StreamProxyServiceMonitor:
 
                 enhanced_log(
                     "✅ [SERVICEMONITOR] Reference modified for exteplayer3 (5001)",
-                    "INFO"
-                )
+                    "INFO")
 
                 return eServiceReference(new_ref_str)
 
