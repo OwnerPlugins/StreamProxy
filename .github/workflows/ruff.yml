@@ -26,5 +26,5 @@ jobs:
 
       - name: Run Ruff
         run: |
-          cd usr/lib/enigma2/python/Plugins/Extensions/StalkerPortalConverter
+          cd usr/lib/enigma2/python/Plugins/Extensions/StreamProxy
           ruff check .
