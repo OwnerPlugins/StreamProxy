@@ -38,7 +38,7 @@ msgid "Salva"
 msgstr ""
 
 msgid "StreamProxy Setup"
-msgstr ""
+msgstr "Setup ta' StreamProxy"
 
 msgid "User-Agent"
 msgstr "Utent-aġent"

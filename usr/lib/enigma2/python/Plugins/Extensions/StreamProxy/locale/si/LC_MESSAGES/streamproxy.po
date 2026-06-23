@@ -38,13 +38,13 @@ msgid "Salva"
 msgstr "සල්වා"
 
 msgid "StreamProxy Setup"
-msgstr ""
+msgstr "StreamProxy සැකසුම"
 
 msgid "User-Agent"
-msgstr ""
+msgstr "පරිශීලක නියෝජිතයා"
 
 msgid "User-Agent personalizzato"
 msgstr "අභිරුචි පරිශීලක නියෝජිතයා"
 
 msgid "Visualizza log"
-msgstr ""
+msgstr "ලඝු-සටහන් බලන්න"
