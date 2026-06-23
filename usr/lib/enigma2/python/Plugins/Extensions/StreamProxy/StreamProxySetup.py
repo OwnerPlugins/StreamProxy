@@ -6,8 +6,8 @@ from Components.Button import Button
 from Components.ActionMap import ActionMap
 from Components.config import config, getConfigListEntry
 from enigma import ePoint
-from .locale import Locale
 from . import proxy_manager
+from . import _
 
 
 class StreamProxySetup(Screen, ConfigListScreen):
@@ -26,18 +26,18 @@ class StreamProxySetup(Screen, ConfigListScreen):
         self.changed = False  # Flag per tracciare le modifiche
 
         # Configura i pulsanti
-        self["key_red"] = Button(Locale._("Annulla"))
-        self["key_green"] = Button(Locale._("Salva"))
+        self["key_red"] = Button(_("Annulla"))
+        self["key_green"] = Button(_("Salva"))
 
         # Configura la lista delle opzioni
         ConfigListScreen.__init__(self, [
-            getConfigListEntry(Locale._("Abilita Stream Proxy"), config.plugins.streamproxy.enabled),
-            getConfigListEntry(Locale._("Porta proxy"), config.plugins.streamproxy.port),
-            getConfigListEntry(Locale._("Abilita filtro canali"), config.plugins.streamproxy.filter_enabled),
-            getConfigListEntry(Locale._("Mostra notifiche"), config.plugins.streamproxy.show_notifications),
-            getConfigListEntry(Locale._("Visualizza log"), config.plugins.streamproxy.show_log),
-            getConfigListEntry(Locale._("Numero massimo righe log"), config.plugins.streamproxy.log_max_lines),
-            getConfigListEntry(Locale._("User-Agent personalizzato"), config.plugins.streamproxy.use_custom_useragent),
+            getConfigListEntry(_("Abilita Stream Proxy"), config.plugins.streamproxy.enabled),
+            getConfigListEntry(_("Porta proxy"), config.plugins.streamproxy.port),
+            getConfigListEntry(_("Abilita filtro canali"), config.plugins.streamproxy.filter_enabled),
+            getConfigListEntry(_("Mostra notifiche"), config.plugins.streamproxy.show_notifications),
+            getConfigListEntry(_("Visualizza log"), config.plugins.streamproxy.show_log),
+            getConfigListEntry(_("Numero massimo righe log"), config.plugins.streamproxy.log_max_lines),
+            getConfigListEntry(_("User-Agent personalizzato"), config.plugins.streamproxy.use_custom_useragent),
         ])
 
         # Aggiungi il campo custom_useragent solo se use_custom_useragent è
@@ -45,7 +45,7 @@ class StreamProxySetup(Screen, ConfigListScreen):
         if config.plugins.streamproxy.use_custom_useragent.value:
             self["config"].list.append(
                 getConfigListEntry(
-                    Locale._("User-Agent"),
+                    _("User-Agent"),
                     config.plugins.streamproxy.custom_useragent))
 
         # Configura le azioni dei pulsanti
@@ -63,23 +63,23 @@ class StreamProxySetup(Screen, ConfigListScreen):
             self.useragentChanged)
 
     def layoutFinished(self):
-        self.setTitle(Locale._("StreamProxy Setup"))
+        self.setTitle(_("StreamProxy Setup"))
 
     def useragentChanged(self, configElement):
         # Aggiorna la lista quando cambia use_custom_useragent
         self["config"].list = [
-            getConfigListEntry(Locale._("Abilita Stream Proxy"), config.plugins.streamproxy.enabled),
-            getConfigListEntry(Locale._("Porta proxy"), config.plugins.streamproxy.port),
-            getConfigListEntry(Locale._("Abilita filtro canali"), config.plugins.streamproxy.filter_enabled),
-            getConfigListEntry(Locale._("Mostra notifiche"), config.plugins.streamproxy.show_notifications),
-            getConfigListEntry(Locale._("Visualizza log"), config.plugins.streamproxy.show_log),
-            getConfigListEntry(Locale._("Numero massimo righe log"), config.plugins.streamproxy.log_max_lines),
-            getConfigListEntry(Locale._("User-Agent personalizzato"), config.plugins.streamproxy.use_custom_useragent),
+            getConfigListEntry(_("Abilita Stream Proxy"), config.plugins.streamproxy.enabled),
+            getConfigListEntry(_("Porta proxy"), config.plugins.streamproxy.port),
+            getConfigListEntry(_("Abilita filtro canali"), config.plugins.streamproxy.filter_enabled),
+            getConfigListEntry(_("Mostra notifiche"), config.plugins.streamproxy.show_notifications),
+            getConfigListEntry(_("Visualizza log"), config.plugins.streamproxy.show_log),
+            getConfigListEntry(_("Numero massimo righe log"), config.plugins.streamproxy.log_max_lines),
+            getConfigListEntry(_("User-Agent personalizzato"), config.plugins.streamproxy.use_custom_useragent),
         ]
         if configElement.value:
             self["config"].list.append(
                 getConfigListEntry(
-                    Locale._("User-Agent"),
+                    _("User-Agent"),
                     config.plugins.streamproxy.custom_useragent))
         self["config"].l.setList(self["config"].list)
 
