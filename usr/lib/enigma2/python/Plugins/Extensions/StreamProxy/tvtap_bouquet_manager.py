@@ -265,11 +265,11 @@ class TVTapBouquetManager:
             # query_params = parse_qs(parsed_url.query)
 
             # Look for existing authSign
-            current_authsign = None
+            # current_authsign = None
             for pattern in self.authsign_patterns:
                 match = re.search(pattern, original_url)
                 if match:
-                    current_authsign = match.group(1)
+                    # current_authsign = match.group(1)
                     break
 
             # Determine TVTap channel ID

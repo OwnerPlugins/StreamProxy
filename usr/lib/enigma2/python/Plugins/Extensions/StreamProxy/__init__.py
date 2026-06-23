@@ -33,9 +33,7 @@ localeInit()
 language.addCallback(localeInit)
 
 
+import importlib.util
+CRYPTO_AVAILABLE = importlib.util.find_spec("Crypto.Cipher.AES") is not None
 print("[StreamProxy] Plugin init")
-try:
-    from Crypto.Cipher import AES
-    CRYPTO_AVAILABLE = True
-except ImportError:
-    CRYPTO_AVAILABLE = False
+

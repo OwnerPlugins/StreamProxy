@@ -427,8 +427,8 @@ class des(_baseDes):
             # Turn the strings into integers. Python 3 uses a bytes
             # class, which already has this behaviour.
             data = [ord(c) for c in data]
-        l = len(data) * 8
-        result = [0] * l
+        data_len = len(data) * 8
+        result = [0] * data_len
         pos = 0
         for ch in data:
             i = 7
@@ -599,7 +599,7 @@ class des(_baseDes):
 
         # Split the data into blocks, crypting each one seperately
         i = 0
-        dict = {}
+        # dict = {}
         result = []
         # cached = 0
         # lines = 0

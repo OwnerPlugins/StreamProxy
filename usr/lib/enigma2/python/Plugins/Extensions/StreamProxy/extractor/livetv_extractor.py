@@ -474,7 +474,7 @@ def process_powerset_url(url, headers=None):
         "LIVETV")
 
     try:
-        extractor = LiveTVExtractor(headers)
+        # extractor = LiveTVExtractor(headers)
 
         # For now return a simple result
         # In the future, specific powerset logic will go here
