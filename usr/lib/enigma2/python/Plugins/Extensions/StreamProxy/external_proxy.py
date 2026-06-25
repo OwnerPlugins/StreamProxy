@@ -39,20 +39,25 @@ _EXTRACTOR_HOSTS = {
     'watch.php': 'dlstreams',
 }
 
-# ── Config cache ────────────────────────────────────────────────────────────────
+# ── Config cache ────────────────────────────────────────────────────────
 _cfg_cache = {}
 _cfg_cache_ts = 0.0
 _cfg_cache_ttl = 30.0
 _cfg_lock = threading.Lock()
 
-# ── Manifest cache for daddy streams ───────────────────────────────────────────
+# ── Manifest cache for daddy streams ────────────────────────────────────
 _manifest_cache = {}
 _manifest_lock = threading.Lock()
 _DADDY_MANIFEST_TTL = 8.0
-_DADDY_KEYWORDS = ('daddylive', 'daddyhd', 'dlhd.dad', 'dlstreams', 'watch.php')
+_DADDY_KEYWORDS = (
+    'daddylive',
+    'daddyhd',
+    'dlhd.dad',
+    'dlstreams',
+    'watch.php')
 _MAX_MANIFEST_CACHE = 20  # Cache limit to avoid memory leaks
 
-# ── Persistent HTTP session ───────────────────────────────────────────────────
+# ── Persistent HTTP session ─────────────────────────────────────────────
 _session = {'instance': None}
 _session_lock = threading.Lock()
 _session_timeout = 15  # Default request timeout
@@ -64,7 +69,8 @@ def _get_session():
         if session is None:
             session = requests.Session()
             session.verify = False
-            session.headers.update({'Connection': 'keep-alive', 'Accept': '*/*'})
+            session.headers.update(
+                {'Connection': 'keep-alive', 'Accept': '*/*'})
             session._created_at = time.time()
             _session['instance'] = session
         return session
@@ -78,7 +84,9 @@ def _close_session():
             try:
                 session.close()
             except Exception as e:
-                enhanced_log("Error closing HTTP session: %s" % e, "WARNING", "ExtProxy")
+                enhanced_log(
+                    "Error closing HTTP session: %s" %
+                    e, "WARNING", "ExtProxy")
             _session['instance'] = None
 
 
@@ -97,7 +105,9 @@ def load_proxy_config():
                     _cfg_cache_ts = now
                     return _cfg_cache
                 except Exception as e:
-                    enhanced_log("Error reading configProxy.txt: %s" % e, "WARNING", "ExtProxy")
+                    enhanced_log(
+                        "Error reading configProxy.txt: %s" %
+                        e, "WARNING", "ExtProxy")
         return _cfg_cache or {}
 
 
@@ -182,18 +192,26 @@ def _fetch_via_session(url, req_headers, timeout, retry=1):
             with _session_lock:
                 _session['instance'] = None
             session = _get_session()
-            enhanced_log("[MANIFEST] Reconnection (attempt %d): %s" % (attempt + 1, e), "WARNING", "ExtProxy")
+            enhanced_log(
+                "[MANIFEST] Reconnection (attempt %d): %s" %
+                (attempt + 1, e), "WARNING", "ExtProxy")
         except requests.exceptions.Timeout as e:
             last_exc = e
-            enhanced_log("[MANIFEST] Timeout (attempt %d)" % (attempt + 1), "WARNING", "ExtProxy")
+            enhanced_log(
+                "[MANIFEST] Timeout (attempt %d)" %
+                (attempt + 1), "WARNING", "ExtProxy")
             break
         except requests.exceptions.RequestException as e:
             last_exc = e
-            enhanced_log("[MANIFEST] Request error (attempt %d): %s" % (attempt + 1, e), "WARNING", "ExtProxy")
+            enhanced_log(
+                "[MANIFEST] Request error (attempt %d): %s" %
+                (attempt + 1, e), "WARNING", "ExtProxy")
             break
         except Exception as e:
             last_exc = e
-            enhanced_log("[MANIFEST] Unexpected error (attempt %d): %s: %s" % (attempt + 1, type(e).__name__, e), "WARNING", "ExtProxy")
+            enhanced_log(
+                "[MANIFEST] Unexpected error (attempt %d): %s: %s" %
+                (attempt + 1, type(e).__name__, e), "WARNING", "ExtProxy")
             break
     if last_exc:
         raise RuntimeError("Fetch failed") from last_exc
@@ -217,13 +235,19 @@ def fetch_cdn_via_easyproxy_session(cdn_url, req_headers=None, timeout=15):
         )
         return resp
     except requests.exceptions.Timeout as e:
-        enhanced_log("[ExtProxy] CDN fetch timeout: %s" % e, "WARNING", "ExtProxy")
+        enhanced_log(
+            "[ExtProxy] CDN fetch timeout: %s" %
+            e, "WARNING", "ExtProxy")
         raise
     except requests.exceptions.RequestException as e:
-        enhanced_log("[ExtProxy] CDN fetch error: %s" % e, "WARNING", "ExtProxy")
+        enhanced_log(
+            "[ExtProxy] CDN fetch error: %s" %
+            e, "WARNING", "ExtProxy")
         raise
     except Exception as e:
-        enhanced_log("[ExtProxy] Unexpected CDN fetch error: %s: %s" % (type(e).__name__, e), "WARNING", "ExtProxy")
+        enhanced_log(
+            "[ExtProxy] Unexpected CDN fetch error: %s: %s" %
+            (type(e).__name__, e), "WARNING", "ExtProxy")
         raise
 
 
@@ -245,7 +269,9 @@ def register_cdn_domain(url):
                     _active_cdn_domains.discard(oldest)
                 _active_cdn_domains.add(netloc)
     except Exception as e:
-        enhanced_log("[ExtProxy] Error registering CDN domain: %s" % e, "WARNING", "ExtProxy")
+        enhanced_log(
+            "[ExtProxy] Error registering CDN domain: %s" %
+            e, "WARNING", "ExtProxy")
 
 
 def is_cdn_daddy_url(url):
@@ -255,7 +281,9 @@ def is_cdn_daddy_url(url):
         with _cdn_lock:
             return netloc in _active_cdn_domains
     except Exception as e:
-        enhanced_log("[ExtProxy] Error checking CDN domain: %s" % e, "WARNING", "ExtProxy")
+        enhanced_log(
+            "[ExtProxy] Error checking CDN domain: %s" %
+            e, "WARNING", "ExtProxy")
         return False
 
 
@@ -263,10 +291,14 @@ def fetch_segment_via_proxy_esterno(segment_url, req_headers=None, timeout=15):
     """Download TS segment from EasyProxy (headers already in the URL as parameters)."""
     session = _get_session()
 
-    enhanced_log("[SEGMENT_FETCH] Request to EasyProxy (headers in URL)", "INFO", "ExtProxy")
+    enhanced_log(
+        "[SEGMENT_FETCH] Request to EasyProxy (headers in URL)",
+        "INFO",
+        "ExtProxy")
 
     try:
-        # Do NOT add headers because they are already in the URL as h_* and api_password
+        # Do NOT add headers because they are already in the URL as h_* and
+        # api_password
         resp = session.get(
             segment_url,
             timeout=(min(5, timeout), timeout),
@@ -275,16 +307,26 @@ def fetch_segment_via_proxy_esterno(segment_url, req_headers=None, timeout=15):
             stream=True
         )
 
-        enhanced_log("[SEGMENT_FETCH] HTTP %s" % resp.status_code, "INFO", "ExtProxy")
+        enhanced_log(
+            "[SEGMENT_FETCH] HTTP %s" %
+            resp.status_code,
+            "INFO",
+            "ExtProxy")
         return resp
     except requests.exceptions.Timeout as e:
-        enhanced_log("[ExtProxy] Segment fetch timeout: %s" % e, "WARNING", "ExtProxy")
+        enhanced_log(
+            "[ExtProxy] Segment fetch timeout: %s" %
+            e, "WARNING", "ExtProxy")
         raise
     except requests.exceptions.RequestException as e:
-        enhanced_log("[ExtProxy] Segment fetch error: %s" % e, "WARNING", "ExtProxy")
+        enhanced_log(
+            "[ExtProxy] Segment fetch error: %s" %
+            e, "WARNING", "ExtProxy")
         raise
     except Exception as e:
-        enhanced_log("[ExtProxy] Unexpected segment fetch error: %s: %s" % (type(e).__name__, e), "WARNING", "ExtProxy")
+        enhanced_log(
+            "[ExtProxy] Unexpected segment fetch error: %s: %s" %
+            (type(e).__name__, e), "WARNING", "ExtProxy")
         raise
 
 
@@ -304,21 +346,27 @@ def resolve_via_proxy_esterno(url, request_headers=None):
     timeout = int(cfg.get('timeoutProxy', 15))
 
     if not proxy_url:
-        enhanced_log("proxyUrl not configured in configProxy.txt", "ERROR", "ExtProxy")
+        enhanced_log(
+            "proxyUrl not configured in configProxy.txt",
+            "ERROR",
+            "ExtProxy")
         return None
 
     clean_src = _clean_url(url)
-    enhanced_log("[ExtProxy] proxyUrl=%s timeout=%ds url=%s" % (proxy_url, timeout, clean_src[:80]), "INFO", "ExtProxy")
+    enhanced_log("[ExtProxy] proxyUrl=%s timeout=%ds url=%s" %
+                 (proxy_url, timeout, clean_src[:80]), "INFO", "ExtProxy")
 
     is_daddy = _is_daddy_url(clean_src)
     cache_key = _url_hash(clean_src) if is_daddy else None
 
-    # ── Daddy manifest cache ────────────────────────────────────────────────────
+    # ── Daddy manifest cache ────────────────────────────────────────────────
     if cache_key:
         with _manifest_lock:
             entry = _manifest_cache.get(cache_key)
         if entry and (time.time() - entry['ts']) < _DADDY_MANIFEST_TTL:
-            enhanced_log("[ExtProxy] Daddy manifest from cache (%.1fs)" % (time.time() - entry['ts']), "INFO", "ExtProxy")
+            enhanced_log(
+                "[ExtProxy] Daddy manifest from cache (%.1fs)" %
+                (time.time() - entry['ts']), "INFO", "ExtProxy")
             return {
                 'resolved_url': entry['resolved_url'],
                 'm3u8_content': entry['content'],
@@ -330,14 +378,22 @@ def resolve_via_proxy_esterno(url, request_headers=None):
     # ── STEP 1: FULL DELEGATION TO EXTERNAL PROXY via /proxy/manifest.m3u8 ──
     manifest_url = "%s/proxy/manifest.m3u8" % proxy_url
     final_url = _build_proxy_url(manifest_url, clean_src, api_password)
-    enhanced_log("[ExtProxy] → FULL DELEGATION %s" % final_url[:120], "INFO", "ExtProxy")
+    enhanced_log("[ExtProxy] → FULL DELEGATION %s" %
+                 final_url[:120], "INFO", "ExtProxy")
 
     try:
         resp = _fetch_via_session(final_url, api_headers, timeout, retry=1)
-        enhanced_log("[ExtProxy] ← HTTP %s" % resp.status_code, "INFO", "ExtProxy")
+        enhanced_log(
+            "[ExtProxy] ← HTTP %s" %
+            resp.status_code,
+            "INFO",
+            "ExtProxy")
 
         if resp.status_code == 200 and resp.text.strip().startswith('#EXTM3U'):
-            enhanced_log("[ExtProxy] Stream fully handled by external proxy", "INFO", "ExtProxy")
+            enhanced_log(
+                "[ExtProxy] Stream fully handled by external proxy",
+                "INFO",
+                "ExtProxy")
 
             # Register CDN domains for daddy
             if is_daddy:
@@ -359,9 +415,13 @@ def resolve_via_proxy_esterno(url, request_headers=None):
             if cache_key:
                 with _manifest_lock:
                     if len(_manifest_cache) > _MAX_MANIFEST_CACHE:
-                        oldest = min(_manifest_cache.keys(), key=lambda k: _manifest_cache[k]['ts'])
+                        oldest = min(
+                            _manifest_cache.keys(),
+                            key=lambda k: _manifest_cache[k]['ts'])
                         del _manifest_cache[oldest]
-                        enhanced_log("[ExtProxy] Manifest cache cleaned (removed %d entries)" % len(_manifest_cache), "DEBUG", "ExtProxy")
+                        enhanced_log(
+                            "[ExtProxy] Manifest cache cleaned (removed %d entries)" %
+                            len(_manifest_cache), "DEBUG", "ExtProxy")
                     _manifest_cache[cache_key] = {
                         'content': resp.text,
                         'resolved_url': str(resp.url),
@@ -370,64 +430,100 @@ def resolve_via_proxy_esterno(url, request_headers=None):
                     }
             return result
     except requests.exceptions.Timeout as e:
-        enhanced_log("[ExtProxy] Timeout /proxy/manifest.m3u8: %s" % e, "WARNING", "ExtProxy")
+        enhanced_log(
+            "[ExtProxy] Timeout /proxy/manifest.m3u8: %s" %
+            e, "WARNING", "ExtProxy")
     except requests.exceptions.RequestException as e:
-        enhanced_log("[ExtProxy] Error /proxy/manifest.m3u8: %s" % e, "WARNING", "ExtProxy")
+        enhanced_log(
+            "[ExtProxy] Error /proxy/manifest.m3u8: %s" %
+            e, "WARNING", "ExtProxy")
     except Exception as e:
-        enhanced_log("[ExtProxy] Unexpected /proxy/manifest.m3u8 error: %s: %s" % (type(e).__name__, e), "WARNING", "ExtProxy")
+        enhanced_log(
+            "[ExtProxy] Unexpected /proxy/manifest.m3u8 error: %s: %s" %
+            (type(e).__name__, e), "WARNING", "ExtProxy")
 
-    # ── STEP 2: NON-DADDY FALLBACK → /proxy/stream ──────────────────────────────
+    # ── STEP 2: NON-DADDY FALLBACK → /proxy/stream ──────────────────────────
     if not is_daddy:
         stream_url = "%s/proxy/stream" % proxy_url
         final_url = _build_proxy_url(stream_url, clean_src, api_password)
-        enhanced_log("[ExtProxy] → GET %s" % final_url[:120], "INFO", "ExtProxy")
+        enhanced_log("[ExtProxy] → GET %s" %
+                     final_url[:120], "INFO", "ExtProxy")
 
         try:
             resp = _fetch_via_session(final_url, api_headers, timeout, retry=1)
-            enhanced_log("[ExtProxy] ← HTTP %s" % resp.status_code, "INFO", "ExtProxy")
+            enhanced_log(
+                "[ExtProxy] ← HTTP %s" %
+                resp.status_code, "INFO", "ExtProxy")
 
             if resp.status_code == 200 and resp.text.strip().startswith('#EXTM3U'):
-                enhanced_log("[ExtProxy] Valid M3U8 from /proxy/stream", "INFO", "ExtProxy")
+                enhanced_log(
+                    "[ExtProxy] Valid M3U8 from /proxy/stream",
+                    "INFO",
+                    "ExtProxy")
                 return {
                     'resolved_url': str(resp.url),
                     'm3u8_content': resp.text,
                     'headers': request_headers or {},
                 }
         except requests.exceptions.Timeout as e:
-            enhanced_log("[ExtProxy] Timeout /proxy/stream: %s" % e, "WARNING", "ExtProxy")
+            enhanced_log(
+                "[ExtProxy] Timeout /proxy/stream: %s" %
+                e, "WARNING", "ExtProxy")
         except requests.exceptions.RequestException as e:
-            enhanced_log("[ExtProxy] Error /proxy/stream: %s" % e, "WARNING", "ExtProxy")
+            enhanced_log(
+                "[ExtProxy] Error /proxy/stream: %s" %
+                e, "WARNING", "ExtProxy")
         except Exception as e:
-            enhanced_log("[ExtProxy] Unexpected /proxy/stream error: %s: %s" % (type(e).__name__, e), "WARNING", "ExtProxy")
+            enhanced_log(
+                "[ExtProxy] Unexpected /proxy/stream error: %s: %s" %
+                (type(e).__name__, e), "WARNING", "ExtProxy")
 
     # ── STEP 3: DADDY FALLBACK → /extractor/video for CDN URL and internal handling ──
     if is_daddy:
         host = _detect_host(clean_src) or 'dlstreams'
-        extractor_url = "%s/extractor/video?host=%s&d=%s&api_password=%s" % (proxy_url, host, quote(clean_src), api_password)
-        enhanced_log("[ExtProxy] Daddy fallback → extractor for CDN URL: %s" % extractor_url[:120], "INFO", "ExtProxy")
+        extractor_url = "%s/extractor/video?host=%s&d=%s&api_password=%s" % (
+            proxy_url, host, quote(clean_src), api_password)
+        enhanced_log("[ExtProxy] Daddy fallback → extractor for CDN URL: %s" %
+                     extractor_url[:120], "INFO", "ExtProxy")
         try:
-            resp = _fetch_via_session(extractor_url, api_headers, timeout, retry=1)
-            enhanced_log("[ExtProxy] extractor ← HTTP %s" % resp.status_code, "INFO", "ExtProxy")
+            resp = _fetch_via_session(
+                extractor_url, api_headers, timeout, retry=1)
+            enhanced_log(
+                "[ExtProxy] extractor ← HTTP %s" %
+                resp.status_code, "INFO", "ExtProxy")
             if resp.status_code == 200:
                 try:
                     data = resp.json()
                 except Exception:
                     data = {}
 
-                stream_url = (data.get('destination_url') or data.get('url') or
-                              data.get('stream_url') or data.get('manifest_url') or '')
-                req_hdrs = data.get('request_headers') or data.get('headers') or {}
+                stream_url = (data.get('destination_url') or data.get(
+                    'url') or data.get('stream_url') or data.get('manifest_url') or '')
+                req_hdrs = data.get(
+                    'request_headers') or data.get('headers') or {}
 
-                enhanced_log("[ExtProxy] extractor data keys: %s" % list(data.keys())[:10], "INFO", "ExtProxy")
+                enhanced_log(
+                    "[ExtProxy] extractor data keys: %s" %
+                    list(
+                        data.keys())[
+                        :10],
+                    "INFO",
+                    "ExtProxy")
 
                 if stream_url and stream_url.startswith('http'):
-                    enhanced_log("[ExtProxy] Daddy CDN URL extracted, internal handling: %s" % stream_url[:80], "INFO", "ExtProxy")
+                    enhanced_log("[ExtProxy] Daddy CDN URL extracted, internal handling: %s" %
+                                 stream_url[:80], "INFO", "ExtProxy")
                     register_cdn_domain(stream_url)
-                    # INTERNAL HANDLING: download CDN manifest with EasyProxy session
+                    # INTERNAL HANDLING: download CDN manifest with EasyProxy
+                    # session
                     try:
-                        m3u_resp = _fetch_via_session(stream_url, req_hdrs, timeout, retry=2)
+                        m3u_resp = _fetch_via_session(
+                            stream_url, req_hdrs, timeout, retry=2)
                         if m3u_resp.status_code == 200 and m3u_resp.text.strip().startswith('#EXTM3U'):
-                            enhanced_log("[ExtProxy] Daddy CDN manifest downloaded, internal handling active", "INFO", "ExtProxy")
+                            enhanced_log(
+                                "[ExtProxy] Daddy CDN manifest downloaded, internal handling active",
+                                "INFO",
+                                "ExtProxy")
                             # Register all CDN domains found in the manifest
                             for line in m3u_resp.text.splitlines():
                                 line = line.strip()
@@ -444,8 +540,10 @@ def resolve_via_proxy_esterno(url, request_headers=None):
                             }
                             if cache_key:
                                 with _manifest_lock:
-                                    if len(_manifest_cache) > _MAX_MANIFEST_CACHE:
-                                        oldest = min(_manifest_cache.keys(), key=lambda k: _manifest_cache[k]['ts'])
+                                    if len(
+                                            _manifest_cache) > _MAX_MANIFEST_CACHE:
+                                        oldest = min(
+                                            _manifest_cache.keys(), key=lambda k: _manifest_cache[k]['ts'])
                                         del _manifest_cache[oldest]
                                     _manifest_cache[cache_key] = {
                                         'content': m3u_resp.text,
@@ -454,32 +552,57 @@ def resolve_via_proxy_esterno(url, request_headers=None):
                                         'ts': time.time(),
                                     }
                             return result
-                        enhanced_log("[ExtProxy] CDN manifest HTTP %s — NO LOCAL FALLBACK" % m3u_resp.status_code, "WARNING", "ExtProxy")
+                        enhanced_log(
+                            "[ExtProxy] CDN manifest HTTP %s — NO LOCAL FALLBACK" %
+                            m3u_resp.status_code, "WARNING", "ExtProxy")
                     except requests.exceptions.Timeout as e:
-                        enhanced_log("[ExtProxy] CDN fetch timeout: %s" % e, "WARNING", "ExtProxy")
+                        enhanced_log(
+                            "[ExtProxy] CDN fetch timeout: %s" %
+                            e, "WARNING", "ExtProxy")
                     except requests.exceptions.RequestException as e:
-                        enhanced_log("[ExtProxy] CDN fetch error: %s" % e, "WARNING", "ExtProxy")
+                        enhanced_log(
+                            "[ExtProxy] CDN fetch error: %s" %
+                            e, "WARNING", "ExtProxy")
                     except Exception as e:
-                        enhanced_log("[ExtProxy] Unexpected CDN fetch error: %s: %s" % (type(e).__name__, e), "WARNING", "ExtProxy")
+                        enhanced_log(
+                            "[ExtProxy] Unexpected CDN fetch error: %s: %s" %
+                            (type(e).__name__, e), "WARNING", "ExtProxy")
                 else:
-                    enhanced_log("[ExtProxy] extractor without URL: %s" % str(data)[:120], "WARNING", "ExtProxy")
+                    enhanced_log(
+                        "[ExtProxy] extractor without URL: %s" %
+                        str(data)[
+                            :120], "WARNING", "ExtProxy")
             else:
-                enhanced_log("[ExtProxy] extractor HTTP %s: %s" % (resp.status_code, resp.text[:80]), "WARNING", "ExtProxy")
+                enhanced_log("[ExtProxy] extractor HTTP %s: %s" % (
+                    resp.status_code, resp.text[:80]), "WARNING", "ExtProxy")
         except requests.exceptions.Timeout as e:
-            enhanced_log("[ExtProxy] Timeout extractor: %s" % e, "WARNING", "ExtProxy")
+            enhanced_log(
+                "[ExtProxy] Timeout extractor: %s" %
+                e, "WARNING", "ExtProxy")
         except requests.exceptions.RequestException as e:
-            enhanced_log("[ExtProxy] Error extractor: %s" % e, "WARNING", "ExtProxy")
+            enhanced_log(
+                "[ExtProxy] Error extractor: %s" %
+                e, "WARNING", "ExtProxy")
         except Exception as e:
-            enhanced_log("[ExtProxy] Unexpected extractor error: %s: %s" % (type(e).__name__, e), "WARNING", "ExtProxy")
+            enhanced_log(
+                "[ExtProxy] Unexpected extractor error: %s: %s" %
+                (type(e).__name__, e), "WARNING", "ExtProxy")
 
     # ── Final fallback: retry standard endpoint ONLY if NOT daddy ──
     if not is_daddy:
-        for endpoint in ["%s/proxy/manifest.m3u8" % proxy_url, "%s/proxy/stream" % proxy_url]:
+        for endpoint in [
+            "%s/proxy/manifest.m3u8" %
+            proxy_url,
+            "%s/proxy/stream" %
+                proxy_url]:
             final_url = _build_proxy_url(endpoint, clean_src, api_password)
-            enhanced_log("[ExtProxy] → GET %s" % final_url[:120], "INFO", "ExtProxy")
+            enhanced_log("[ExtProxy] → GET %s" %
+                         final_url[:120], "INFO", "ExtProxy")
             try:
-                resp = _fetch_via_session(final_url, api_headers, timeout, retry=1)
-                enhanced_log("[ExtProxy] ← HTTP %s url=%s" % (resp.status_code, resp.url[:80]), "INFO", "ExtProxy")
+                resp = _fetch_via_session(
+                    final_url, api_headers, timeout, retry=1)
+                enhanced_log("[ExtProxy] ← HTTP %s url=%s" %
+                             (resp.status_code, resp.url[:80]), "INFO", "ExtProxy")
 
                 if resp.status_code == 200 and resp.text.strip().startswith('#EXTM3U'):
                     enhanced_log("[ExtProxy] Valid M3U8", "INFO", "ExtProxy")
@@ -499,7 +622,9 @@ def resolve_via_proxy_esterno(url, request_headers=None):
                     if cache_key:
                         with _manifest_lock:
                             if len(_manifest_cache) > _MAX_MANIFEST_CACHE:
-                                oldest = min(_manifest_cache.keys(), key=lambda k: _manifest_cache[k]['ts'])
+                                oldest = min(
+                                    _manifest_cache.keys(),
+                                    key=lambda k: _manifest_cache[k]['ts'])
                                 del _manifest_cache[oldest]
                             _manifest_cache[cache_key] = {
                                 'content': resp.text,
@@ -510,30 +635,43 @@ def resolve_via_proxy_esterno(url, request_headers=None):
                     return result
 
                 body_preview = resp.text[:200] if resp.text else ''
-                enhanced_log("[ExtProxy] %s: HTTP %s body=%s" % (endpoint.split('/')[-1], resp.status_code, body_preview[:80]), "ERROR", "ExtProxy")
+                enhanced_log("[ExtProxy] %s: HTTP %s body=%s" % (endpoint.split(
+                    '/')[-1], resp.status_code, body_preview[:80]), "ERROR", "ExtProxy")
                 if resp.status_code == 500 and 'browser' in body_preview.lower():
                     continue
 
             except requests.exceptions.Timeout as e:
-                enhanced_log("[ExtProxy] Timeout %s: %s" % (endpoint, e), "WARNING", "ExtProxy")
+                enhanced_log(
+                    "[ExtProxy] Timeout %s: %s" %
+                    (endpoint, e), "WARNING", "ExtProxy")
             except requests.exceptions.RequestException as e:
-                enhanced_log("[ExtProxy] Error %s: %s" % (endpoint, e), "WARNING", "ExtProxy")
+                enhanced_log(
+                    "[ExtProxy] Error %s: %s" %
+                    (endpoint, e), "WARNING", "ExtProxy")
             except Exception as e:
-                enhanced_log("[ExtProxy] Unexpected %s error: %s: %s" % (endpoint, type(e).__name__, e), "WARNING", "ExtProxy")
+                enhanced_log(
+                    "[ExtProxy] Unexpected %s error: %s: %s" %
+                    (endpoint, type(e).__name__, e), "WARNING", "ExtProxy")
     else:
-        enhanced_log("[ExtProxy] Daddy: NO LOCAL FALLBACK available", "ERROR", "ExtProxy")
+        enhanced_log(
+            "[ExtProxy] Daddy: NO LOCAL FALLBACK available",
+            "ERROR",
+            "ExtProxy")
 
-    # ── Daddy cache fallback ────────────────────────────────────────────────────
+    # ── Daddy cache fallback ────────────────────────────────────────────────
     if cache_key:
         with _manifest_lock:
             entry = _manifest_cache.get(cache_key)
         if entry:
-            enhanced_log("[ExtProxy] Daddy cache fallback (age %.0fs)" % (time.time() - entry['ts']), "WARNING", "ExtProxy")
+            enhanced_log(
+                "[ExtProxy] Daddy cache fallback (age %.0fs)" %
+                (time.time() - entry['ts']), "WARNING", "ExtProxy")
             return {
                 'resolved_url': entry['resolved_url'],
                 'm3u8_content': entry['content'],
                 'headers': entry.get('headers', {}),
             }
 
-    enhanced_log("[ExtProxy] Resolution failed for: %s" % url[:80], "ERROR", "ExtProxy")
+    enhanced_log("[ExtProxy] Resolution failed for: %s" %
+                 url[:80], "ERROR", "ExtProxy")
     return None
