@@ -4,7 +4,7 @@ import json
 import re
 import time
 import html
-from urllib.parse import parse_qs, parse_qsl, urlencode, urljoin, urlparse, urlunparse
+from urllib.parse import parse_qs, parse_qsl, unquote, urlencode, urljoin, urlparse, urlunparse
 
 try:
     import curl_cffi.requests as requests
@@ -443,6 +443,7 @@ class VixSrcExtractor:
         """Extract the master HLS playlist from VixSrc/VixCloud."""
         enhanced_log("START extract: %s..." % url[:80], "INFO", "VIX")
         try:
+            url = unquote(url)
             if not url.startswith("http"):
                 url = "https://" + re.sub(r"^//", "", url)
 
