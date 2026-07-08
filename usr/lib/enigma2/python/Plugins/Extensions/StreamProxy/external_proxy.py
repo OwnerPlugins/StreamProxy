@@ -108,6 +108,23 @@ def load_proxy_config():
                     enhanced_log(
                         "Error reading configProxy.txt: %s" %
                         e, "WARNING", "ExtProxy")
+        # Fallback: read from Enigma2 config if available
+        try:
+            from Components.config import config as e2cfg
+            sp = e2cfg.plugins.streamproxy
+            data = {
+                "attivaProxyEsterno": "SI" if sp.attivaProxyEsterno.value else "NO",
+                "proxyUrl": sp.proxyUrl.value,
+                "apiPassword": sp.apiPassword.value,
+                "timeoutProxy": sp.timeoutProxy.value,
+                "usaExtractor": "SI" if sp.usaExtractor.value else "NO",
+                "usaHlsProxy": "SI" if sp.usaHlsProxy.value else "NO",
+            }
+            _cfg_cache = data
+            _cfg_cache_ts = now
+            return _cfg_cache
+        except Exception:
+            pass
         return _cfg_cache or {}
 
 
@@ -168,12 +185,33 @@ def _clean_url(url):
 
 
 def _build_proxy_url(endpoint, clean_src_url, api_password):
-    # Encode the URL before passing to EasyProxy
     encoded_url = quote(clean_src_url, safe='')
     qs = "url=%s" % encoded_url
     if api_password:
         qs += "&api_password=%s" % api_password
     return "%s?%s" % (endpoint, qs)
+
+
+def build_external_segment_url(segment_url, api_password=None):
+    """Build the URL to fetch a TS segment via the external proxy."""
+    cfg = load_proxy_config()
+    proxy_url = cfg.get('proxyUrl', '').rstrip('/')
+    if not proxy_url:
+        return None
+    pw = api_password or cfg.get('apiPassword', '')
+    endpoint = "%s/proxy/ts" % proxy_url
+    return _build_proxy_url(endpoint, _clean_url(segment_url), pw)
+
+
+def build_external_key_url(key_url, api_password=None):
+    """Build the URL to fetch an AES key via the external proxy."""
+    cfg = load_proxy_config()
+    proxy_url = cfg.get('proxyUrl', '').rstrip('/')
+    if not proxy_url:
+        return None
+    pw = api_password or cfg.get('apiPassword', '')
+    endpoint = "%s/proxy/key" % proxy_url
+    return _build_proxy_url(endpoint, _clean_url(key_url), pw)
 
 
 def _fetch_via_session(url, req_headers, timeout, retry=1):
