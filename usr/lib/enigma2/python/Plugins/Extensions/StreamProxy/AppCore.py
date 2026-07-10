@@ -1665,7 +1665,8 @@ def resolve_m3u8_link(url, headers=None, **kwargs):
                     "[RESOLVE_VIDXGO] VidXgo resolved successfully",
                     "INFO",
                     "AppCore")
-                combined_headers = {**final_headers, **resolved_vidxgo.get("headers", {})}
+                combined_headers = {**final_headers, **
+                                    resolved_vidxgo.get("headers", {})}
                 return {
                     "resolved_url": resolved_vidxgo["resolved_url"],
                     "headers": combined_headers,
