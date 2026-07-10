@@ -455,12 +455,12 @@ class VixSrcExtractor:
             if not url.startswith("http"):
                 url = "https://" + re.sub(r"^//", "", url)
 
-            # Rewrite calpezz8.space as in the server proxy
+            # Rewrite unitv.mom as in the server proxy
             url = url.replace(
                 "vixsrc.to",
-                "calpezz8.space").replace(
+                "unitv.mom").replace(
                 "vixcloud.co",
-                "calpezz8.space")
+                "unitv.mom")
 
             parsed_url = urlparse(url)
             response = None
@@ -533,13 +533,13 @@ class VixSrcExtractor:
             if not final_url:
                 raise VixExtractorError("No playlist data found in response")
 
-            # Rewrite vixcloud.co/vixsrc.to → calpezz8.space in the final URL
+            # Rewrite vixcloud.co/vixsrc.to → unitv.mom in the final URL
             final_url = final_url.replace(
-                "vixcloud.co", "calpezz8.space").replace(
-                "vixsrc.to", "calpezz8.space")
+                "vixcloud.co", "unitv.mom").replace(
+                "vixsrc.to", "unitv.mom")
             stream_url = url.replace(
-                "vixcloud.co", "calpezz8.space").replace(
-                "vixsrc.to", "calpezz8.space")
+                "vixcloud.co", "unitv.mom").replace(
+                "vixsrc.to", "unitv.mom")
 
             enhanced_log("SUCCESS: %s..." % final_url[:120], "INFO", "VIX")
 

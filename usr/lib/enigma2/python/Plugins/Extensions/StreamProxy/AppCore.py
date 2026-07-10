@@ -2166,13 +2166,13 @@ def get_stream_id_from_url(url):
             return stream_id
 
     # For VIX, use playlist ID as base (covers vixsrc.to, vixcloud.co,
-    # calpezz8.space, etc.)
+    # unitv.mom, etc.)
     playlist_match = re.search(r'/playlist/(\d+)', url)
     if playlist_match and any(
         d in url.lower() for d in [
             'vixsrc',
             'vixcloud',
-            'calpezz',
+            'unitv',
             'vix-content']):
         playlist_id = playlist_match.group(1)
         stream_id = hashlib.sha256(
