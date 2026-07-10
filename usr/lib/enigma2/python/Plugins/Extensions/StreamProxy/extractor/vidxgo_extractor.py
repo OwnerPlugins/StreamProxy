@@ -58,8 +58,7 @@ class VidXgoExtractor:
         self.embed_headers = {
             "user-agent": (
                 "Mozilla/5.0 (X11; Linux x86_64; rv:150.0) "
-                "Gecko/20100101 Firefox/150.0"
-            ),
+                "Gecko/20100101 Firefox/150.0"),
             "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
             "accept-language": "it-IT,it;q=0.9,en;q=0.8",
             "referer": EMBED_FETCH_REFERER,
@@ -94,7 +93,10 @@ class VidXgoExtractor:
                     status_forcelist=[429, 500, 502, 503, 504],
                     allowed_methods=["GET"],
                 )
-                adapter = HTTPAdapter(max_retries=retry, pool_connections=2, pool_maxsize=4)
+                adapter = HTTPAdapter(
+                    max_retries=retry,
+                    pool_connections=2,
+                    pool_maxsize=4)
                 self.session.mount("http://", adapter)
                 self.session.mount("https://", adapter)
 
@@ -109,7 +111,8 @@ class VidXgoExtractor:
             resp.raise_for_status()
             return resp.text
         except Exception as exc:
-            raise VidXgoExtractorError("VidXgo fetch failed for %s: %s" % (url[:80], exc))
+            raise VidXgoExtractorError(
+                "VidXgo fetch failed for %s: %s" % (url[:80], exc))
 
     @staticmethod
     def _decode_embed(html):
@@ -136,7 +139,8 @@ class VidXgoExtractor:
             klen = len(key_bytes)
             if not klen:
                 continue
-            xored = bytes(b ^ key_bytes[i % klen] for i, b in enumerate(decoded))
+            xored = bytes(b ^ key_bytes[i % klen]
+                          for i, b in enumerate(decoded))
             try:
                 decoded_str = xored.decode("utf-8", errors="ignore")
             except Exception:
@@ -146,8 +150,10 @@ class VidXgoExtractor:
                 return cm.group(1).replace("\\", "").strip()
 
         if "player-container" in html and "corrupt" in html:
-            raise VidXgoExtractorError("VidXgo: source marked corrupt or unavailable")
-        raise VidXgoExtractorError("VidXgo: currentSrc m3u8 not found in any script")
+            raise VidXgoExtractorError(
+                "VidXgo: source marked corrupt or unavailable")
+        raise VidXgoExtractorError(
+            "VidXgo: currentSrc m3u8 not found in any script")
 
     def extract(self, url):
         """Extract HLS playlist URL from a VidXgo embed page."""
@@ -155,7 +161,8 @@ class VidXgoExtractor:
         try:
             parsed = urlparse(url)
             # build playback headers with correct origin/referer
-            playback_domain = "%s://%s" % (parsed.scheme or "https", parsed.netloc or "v.vidxgo.co")
+            playback_domain = "%s://%s" % (parsed.scheme or "https",
+                                           parsed.netloc or "v.vidxgo.co")
             pb_headers = dict(self.playback_headers)
             pb_headers["referer"] = playback_domain + "/"
             pb_headers["origin"] = playback_domain
@@ -165,12 +172,14 @@ class VidXgoExtractor:
                 raise VidXgoExtractorError("Empty embed page for %s" % url)
 
             m3u8_url = self._decode_embed(html)
-            enhanced_log("Decoded m3u8: %s..." % m3u8_url[:80], "INFO", "VIDXGO")
+            enhanced_log("Decoded m3u8: %s..." %
+                         m3u8_url[:80], "INFO", "VIDXGO")
 
             # quick validation: check the manifest is reachable and valid
             manifest = self._fetch(m3u8_url, pb_headers, timeout=15)
             if "#EXTM3U" not in manifest:
-                raise VidXgoExtractorError("Extracted URL did not return a valid HLS manifest")
+                raise VidXgoExtractorError(
+                    "Extracted URL did not return a valid HLS manifest")
 
             enhanced_log("SUCCESS: %s..." % m3u8_url[:120], "INFO", "VIDXGO")
             return {
@@ -185,7 +194,12 @@ class VidXgoExtractor:
             enhanced_log("Extraction error: %s" % exc, "ERROR", "VIDXGO")
             return None
         except Exception as exc:
-            enhanced_log("Unexpected error: %s" % str(exc)[:200], "ERROR", "VIDXGO")
+            enhanced_log(
+                "Unexpected error: %s" %
+                str(exc)[
+                    :200],
+                "ERROR",
+                "VIDXGO")
             return None
 
     def close(self):
