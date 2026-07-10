@@ -824,7 +824,9 @@ class StreamProxyServiceMonitor:
             # Maxstream/Uprot
             "uprot.net", "maxstream.video", "stayonline.pro",
             # Freeshot
-            "popcdn.day", "freeshot://", "freeshot.live", "lovecdn.ru", "planetary.lovecdn.ru", "beautifulpeople.lovecdn.ru"
+            "popcdn.day", "freeshot://", "freeshot.live", "lovecdn.ru", "planetary.lovecdn.ru", "beautifulpeople.lovecdn.ru",
+            # VidXgo
+            "vidxgo"
         )
 
         # VIX domains - specific check only in the domain part

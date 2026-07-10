@@ -963,6 +963,26 @@ except ImportError as e:
         "WARNING",
         "AppCore")
 
+# VidXgo extractor
+try:
+    from .extractor.vidxgo_extractor import vidxgo_extractor, is_vidxgo_link
+    VIDXGO_AVAILABLE = True
+    enhanced_log("VidXgo extractor available", "INFO", "AppCore")
+except ImportError as e:
+    VIDXGO_AVAILABLE = False
+
+    def is_vidxgo_link(*args, **kwargs):
+        return False
+
+    class vidxgo_extractor:
+        @staticmethod
+        def extract(url):
+            return None
+    enhanced_log(
+        "VidXgo extractor not available: %s" % e,
+        "WARNING",
+        "AppCore")
+
 # Mixdrop extractor
 MIXDROP_DOMAINS = (
     'mixdrop.co',
@@ -1628,6 +1648,38 @@ def resolve_m3u8_link(url, headers=None, **kwargs):
         except Exception as e:
             enhanced_log(
                 "[RESOLVE_MAXSTREAM] Maxstream resolver error: %s" % e,
+                "ERROR",
+                "AppCore")
+            return {"resolved_url": clean_url, "headers": final_headers}
+
+    # Check VidXgo
+    if VIDXGO_AVAILABLE and is_vidxgo_link(clean_url):
+        enhanced_log(
+            "[RESOLVE_VIDXGO] Detected VidXgo link: %s..." % clean_url[:50],
+            "INFO",
+            "AppCore")
+        try:
+            resolved_vidxgo = vidxgo_extractor.extract(clean_url)
+            if resolved_vidxgo and resolved_vidxgo.get("resolved_url"):
+                enhanced_log(
+                    "[RESOLVE_VIDXGO] VidXgo resolved successfully",
+                    "INFO",
+                    "AppCore")
+                combined_headers = {**final_headers, **resolved_vidxgo.get("headers", {})}
+                return {
+                    "resolved_url": resolved_vidxgo["resolved_url"],
+                    "headers": combined_headers,
+                    "mediaflow_endpoint": resolved_vidxgo.get("mediaflow_endpoint"),
+                }
+            else:
+                enhanced_log(
+                    "[RESOLVE_VIDXGO] VidXgo resolver returned None",
+                    "WARNING",
+                    "AppCore")
+                return {"resolved_url": clean_url, "headers": final_headers}
+        except Exception as e:
+            enhanced_log(
+                "[RESOLVE_VIDXGO] VidXgo resolver error: %s" % e,
                 "ERROR",
                 "AppCore")
             return {"resolved_url": clean_url, "headers": final_headers}
