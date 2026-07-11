@@ -2,7 +2,6 @@
 # vidxgo_extractor.py - VidXgo embed -> HLS extractor for Enigma2 e
 import base64
 import re
-import time
 from urllib.parse import urlparse
 
 try:

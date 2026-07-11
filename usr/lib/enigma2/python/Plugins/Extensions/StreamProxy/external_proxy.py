@@ -8,7 +8,7 @@ import json
 import time
 import threading
 import requests
-from urllib.parse import unquote, urlparse, quote, urlencode
+from urllib.parse import unquote, urlparse, quote
 
 try:
     from .StreamProxyLog import enhanced_log
