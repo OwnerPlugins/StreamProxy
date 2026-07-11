@@ -319,7 +319,7 @@ StreamProxy acts as a compatibility layer between Enigma2 and modern streaming s
 ### 📜 License Information [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 This is free software; you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation
 This plugin is released under GPLv3. See [LICENSE](https://www.gnu.org/licenses/gpl-3.0.html#license-text) for full details.
-<img src="https://upload.wikimedia.org/wikipedia/commons/0/06/GPLv3_Logo.svg" alt="GPLv3 Logo" width="120">
+<img src="[https://upload.wikimedia.org/wikipedia/commons/0/06/GPLv3_Logo.svg](https://www.gnu.org/graphics/gplv3-127x51.png)" alt="GPLv3 Logo" width="120">
 
 ---
 ### 🚨 Disclaimer
