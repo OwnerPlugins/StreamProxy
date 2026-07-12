@@ -1,50 +1,24 @@
-# streamproxy translations
-# Copyright (C) 2025 Lululla Team
-# This file is distributed under the same license as the Lululla package.
-# [lululla] <ekekaz@gmail.com>, 2025.
+# eu translations
+# Copyright (C) 2026 Lululla Team
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: streamproxy\n"
-"Report-Msgid-Bugs-To: \n"
+"Project-Id-Version: PACKAGE VERSION\n"
 "POT-Creation-Date: \n"
-"PO-Revision-Date: 2026-06-23 18:50+0000\n"
-"Last-Translator:  <EMAIL@ADDRESS>\n"
-"Language-Team: Basque <translation-team-eu@googlegroups.com>\n"
+"PO-Revision-Date: \n"
+"Last-Translator: \n"
+"Language-Team: eu <ekekaz@gmail.com>\n"
 "Language: eu\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-msgid "Abilita Stream Proxy"
-msgstr ""
+msgid "requests.packages.urllib3"
+msgstr "eskaerak.paketeak.urllib3"
 
-msgid "Abilita filtro canali"
-msgstr "Gaitu kanal-iragazkia"
+msgid "requests.packages.urllib3.exceptions"
+msgstr "eskaerak.paketeak.urllib3.salbuespenak"
 
-msgid "Annulla"
-msgstr "Utzi"
+msgid "requests.packages.urllib3.util.retry"
+msgstr "requests.packages.urllib3.util.retry"
 
-msgid "Mostra notifiche"
-msgstr "Erakutsi jakinarazpenak"
-
-msgid "Numero massimo righe log"
-msgstr "Erregistro-lerroen gehienezko kopurua"
-
-msgid "Porta proxy"
-msgstr ""
-
-msgid "Salva"
-msgstr ""
-
-msgid "StreamProxy Setup"
-msgstr "StreamProxy konfigurazioa"
-
-msgid "User-Agent"
-msgstr "Erabiltzaile-Agentea"
-
-msgid "User-Agent personalizzato"
-msgstr "Erabiltzaile-Agente pertsonalizatua"
-
-msgid "Visualizza log"
-msgstr "Ikusi erregistroak"

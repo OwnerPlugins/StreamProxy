@@ -6,27 +6,26 @@ import json
 from Screens.Screen import Screen
 from Components.ConfigList import ConfigListScreen
 from Components.Button import Button
+from Components.Label import Label
 from Components.ActionMap import ActionMap
 from Components.config import config, getConfigListEntry, ConfigNothing
 
-from . import proxy_manager
+from . import proxy_manager, load_skin
 
 
 class StreamProxySetup(Screen, ConfigListScreen):
-    skin = """
-    <screen position="center,center" size="600,440" backgroundColor="#CC1a2a4a">
-        <widget name="config" position="5,5" size="590,390" scrollbarMode="showOnDemand" backgroundColor="#CC1a2a4a" />
-        <ePixmap pixmap="skin_default/buttons/red.png" position="0,400" size="140,40" alphatest="on" />
-        <ePixmap pixmap="skin_default/buttons/green.png" position="140,400" size="140,40" alphatest="on" />
-        <widget name="key_red" position="0,400" zPosition="1" size="140,40" font="Regular;20" halign="center" valign="center" backgroundColor="#9f1313" transparent="1" />
-        <widget name="key_green" position="140,400" zPosition="1" size="140,40" font="Regular;20" halign="center" valign="center" backgroundColor="#1f771f" transparent="1" />
-    </screen>"""
-
     def __init__(self, session):
+        skin_data = load_skin("StreamProxySetup")
+        if skin_data:
+            self.skin = skin_data
+
         Screen.__init__(self, session)
         self.session = session
         self.changed = False
 
+        self["title"] = Label("StreamProxy Setup")
+        self["description"] = Label("")
+        self["status"] = Label("")
         self["key_red"] = Button("Cancel")
         self["key_green"] = Button("Save")
 
@@ -48,6 +47,15 @@ class StreamProxySetup(Screen, ConfigListScreen):
 
     def layoutFinished(self):
         self.setTitle("StreamProxy Setup")
+        self["config"].onSelectionChanged.append(self.updateDescription)
+        self.updateDescription()
+
+    def updateDescription(self):
+        current = self["config"].getCurrent()
+        if current:
+            self["description"].setText(current[0])
+        else:
+            self["description"].setText("")
 
     def _registerNotifiers(self):
         config.plugins.streamproxy.use_custom_useragent.addNotifier(

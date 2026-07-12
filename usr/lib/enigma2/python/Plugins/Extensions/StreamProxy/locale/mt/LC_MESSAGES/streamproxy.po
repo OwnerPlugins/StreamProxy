@@ -1,50 +1,24 @@
-# streamproxy translations
-# Copyright (C) 2025 Lululla Team
-# This file is distributed under the same license as the Lululla package.
-# [lululla] <ekekaz@gmail.com>, 2025.
+# mt translations
+# Copyright (C) 2026 Lululla Team
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: streamproxy\n"
-"Report-Msgid-Bugs-To: \n"
+"Project-Id-Version: PACKAGE VERSION\n"
 "POT-Creation-Date: \n"
-"PO-Revision-Date: 2026-06-23 18:56+0000\n"
-"Last-Translator:  <EMAIL@ADDRESS>\n"
-"Language-Team: Maltese <translation-team-mt@lists.sourceforge.net>\n"
+"PO-Revision-Date: \n"
+"Last-Translator: \n"
+"Language-Team: mt <ekekaz@gmail.com>\n"
 "Language: mt\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-msgid "Abilita Stream Proxy"
-msgstr ""
+msgid "requests.packages.urllib3"
+msgstr "requests.packages.urllib3"
 
-msgid "Abilita filtro canali"
-msgstr "Ippermetti l-filtru tal-kanal"
+msgid "requests.packages.urllib3.exceptions"
+msgstr "talbiet.pakketti.urllib3.eċċezzjonijiet"
 
-msgid "Annulla"
-msgstr "Ikkanċella"
+msgid "requests.packages.urllib3.util.retry"
+msgstr "requests.packages.urllib3.util.retry"
 
-msgid "Mostra notifiche"
-msgstr "Uri notifiki"
-
-msgid "Numero massimo righe log"
-msgstr "Numru massimu ta' linji ta' log"
-
-msgid "Porta proxy"
-msgstr "Porta prokura"
-
-msgid "Salva"
-msgstr ""
-
-msgid "StreamProxy Setup"
-msgstr "Setup ta' StreamProxy"
-
-msgid "User-Agent"
-msgstr "Utent-aġent"
-
-msgid "User-Agent personalizzato"
-msgstr "Utent-aġent tad-dwana"
-
-msgid "Visualizza log"
-msgstr "Ara zkuk"

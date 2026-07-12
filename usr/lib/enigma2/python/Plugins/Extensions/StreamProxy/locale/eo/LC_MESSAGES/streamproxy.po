@@ -1,51 +1,24 @@
-# streamproxy translations
-# Copyright (C) 2025 Lululla Team
-# This file is distributed under the same license as the Lululla package.
-# [lululla] <ekekaz@gmail.com>, 2025.
+# eo translations
+# Copyright (C) 2026 Lululla Team
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: streamproxy\n"
-"Report-Msgid-Bugs-To: \n"
+"Project-Id-Version: PACKAGE VERSION\n"
 "POT-Creation-Date: \n"
-"PO-Revision-Date: 2026-06-23 18:49+0000\n"
-"Last-Translator:  <EMAIL@ADDRESS>\n"
-"Language-Team: Esperanto <translation-team-eo@lists.sourceforge.net>\n"
+"PO-Revision-Date: \n"
+"Last-Translator: \n"
+"Language-Team: eo <ekekaz@gmail.com>\n"
 "Language: eo\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-msgid "Abilita Stream Proxy"
-msgstr ""
+msgid "requests.packages.urllib3"
+msgstr "petoj.pakaĵoj.urllib3"
 
-msgid "Abilita filtro canali"
-msgstr "Ebligu kanalfiltrilon"
+msgid "requests.packages.urllib3.exceptions"
+msgstr "petoj.pakaĵoj.urllib3.esceptoj"
 
-msgid "Annulla"
-msgstr "Nuligi"
+msgid "requests.packages.urllib3.util.retry"
+msgstr "requests.packages.urllib3.util.retry"
 
-msgid "Mostra notifiche"
-msgstr "Montru sciigojn"
-
-msgid "Numero massimo righe log"
-msgstr "Maksimuma nombro da loglinioj"
-
-msgid "Porta proxy"
-msgstr ""
-
-msgid "Salva"
-msgstr ""
-
-msgid "StreamProxy Setup"
-msgstr "Agordo de StreamProxy"
-
-msgid "User-Agent"
-msgstr "Uzanto-Agente"
-
-msgid "User-Agent personalizzato"
-msgstr "Propra Uzanto-Agente"
-
-msgid "Visualizza log"
-msgstr "Vidi protokolojn"

@@ -1,51 +1,24 @@
-# streamproxy translations
-# Copyright (C) 2025 Lululla Team
-# This file is distributed under the same license as the Lululla package.
-# [lululla] <ekekaz@gmail.com>, 2025.
+# sv translations
+# Copyright (C) 2026 Lululla Team
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: streamproxy\n"
-"Report-Msgid-Bugs-To: \n"
+"Project-Id-Version: PACKAGE VERSION\n"
 "POT-Creation-Date: \n"
-"PO-Revision-Date: 2026-06-23 19:00+0000\n"
-"Last-Translator:  <EMAIL@ADDRESS>\n"
-"Language-Team: Swedish <tp-sv@listor.tp-sv.se>\n"
+"PO-Revision-Date: \n"
+"Last-Translator: \n"
+"Language-Team: sv <ekekaz@gmail.com>\n"
 "Language: sv\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-msgid "Abilita Stream Proxy"
-msgstr ""
+msgid "requests.packages.urllib3"
+msgstr "requests.packages.urllib3"
 
-msgid "Abilita filtro canali"
-msgstr "Aktivera kanalfilter"
+msgid "requests.packages.urllib3.exceptions"
+msgstr "requests.packages.urllib3.exceptions"
 
-msgid "Annulla"
-msgstr "Avboka"
+msgid "requests.packages.urllib3.util.retry"
+msgstr "requests.packages.urllib3.util.försök igen"
 
-msgid "Mostra notifiche"
-msgstr "Visa aviseringar"
-
-msgid "Numero massimo righe log"
-msgstr "Maximalt antal loggrader"
-
-msgid "Porta proxy"
-msgstr ""
-
-msgid "Salva"
-msgstr ""
-
-msgid "StreamProxy Setup"
-msgstr "StreamProxy-installation"
-
-msgid "User-Agent"
-msgstr "Användaragent"
-
-msgid "User-Agent personalizzato"
-msgstr "Anpassad användaragent"
-
-msgid "Visualizza log"
-msgstr "Visa loggar"

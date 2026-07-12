@@ -1,50 +1,24 @@
-# streamproxy translations
-# Copyright (C) 2025 Lululla Team
-# This file is distributed under the same license as the Lululla package.
-# [lululla] <ekekaz@gmail.com>, 2025.
+# sw translations
+# Copyright (C) 2026 Lululla Team
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: streamproxy\n"
-"Report-Msgid-Bugs-To: \n"
+"Project-Id-Version: PACKAGE VERSION\n"
 "POT-Creation-Date: \n"
-"PO-Revision-Date: 2026-06-23 19:00+0000\n"
-"Last-Translator:  <EMAIL@ADDRESS>\n"
-"Language-Team: Swahili <(nothing)>\n"
+"PO-Revision-Date: \n"
+"Last-Translator: \n"
+"Language-Team: sw <ekekaz@gmail.com>\n"
 "Language: sw\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-msgid "Abilita Stream Proxy"
-msgstr "Wakala wa Kutiririsha wa Abilita"
+msgid "requests.packages.urllib3"
+msgstr "maombi.vifurushi.urllib3"
 
-msgid "Abilita filtro canali"
-msgstr "Washa kichujio cha kituo"
+msgid "requests.packages.urllib3.exceptions"
+msgstr "maombi.packages.urllib3.vighairi"
 
-msgid "Annulla"
-msgstr "Ghairi"
+msgid "requests.packages.urllib3.util.retry"
+msgstr "requests.packages.urllib3.util.jaribu tena"
 
-msgid "Mostra notifiche"
-msgstr "Onyesha arifa"
-
-msgid "Numero massimo righe log"
-msgstr "Idadi ya juu zaidi ya mistari ya kumbukumbu"
-
-msgid "Porta proxy"
-msgstr "Wakala wa Porta"
-
-msgid "Salva"
-msgstr ""
-
-msgid "StreamProxy Setup"
-msgstr "Usanidi wa Wakala wa Utiririshaji"
-
-msgid "User-Agent"
-msgstr "Mtumiaji-Ajenti"
-
-msgid "User-Agent personalizzato"
-msgstr "Wakala Maalum wa Mtumiaji"
-
-msgid "Visualizza log"
-msgstr "Tazama kumbukumbu"

@@ -1,50 +1,24 @@
-# streamproxy translations
-# Copyright (C) 2025 Lululla Team
-# This file is distributed under the same license as the Lululla package.
-# [lululla] <ekekaz@gmail.com>, 2025.
+# my translations
+# Copyright (C) 2026 Lululla Team
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: streamproxy\n"
-"Report-Msgid-Bugs-To: \n"
+"Project-Id-Version: PACKAGE VERSION\n"
 "POT-Creation-Date: \n"
-"PO-Revision-Date: 2026-06-23 18:56+0000\n"
-"Last-Translator:  <EMAIL@ADDRESS>\n"
-"Language-Team: Burmese\n"
+"PO-Revision-Date: \n"
+"Last-Translator: \n"
+"Language-Team: my <ekekaz@gmail.com>\n"
 "Language: my\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-msgid "Abilita Stream Proxy"
-msgstr ""
+msgid "requests.packages.urllib3"
+msgstr "requests.packages.urlib3"
 
-msgid "Abilita filtro canali"
-msgstr "ချန်နယ်စစ်ထုတ်မှုကို ဖွင့်ပါ။"
+msgid "requests.packages.urllib3.exceptions"
+msgstr "Requests.packages.urlib3.exceptions"
 
-msgid "Annulla"
-msgstr "မလုပ်တော့"
+msgid "requests.packages.urllib3.util.retry"
+msgstr "requests.packages.urlib3.util.retry"
 
-msgid "Mostra notifiche"
-msgstr "အသိပေးချက်များကိုပြသပါ။"
-
-msgid "Numero massimo righe log"
-msgstr "အများဆုံး မှတ်တမ်းလိုင်းများ"
-
-msgid "Porta proxy"
-msgstr "Porta ပရောက်စီ"
-
-msgid "Salva"
-msgstr "ဆာဗာ"
-
-msgid "StreamProxy Setup"
-msgstr "StreamProxy စနစ်ထည့်သွင်းခြင်း။"
-
-msgid "User-Agent"
-msgstr "အသုံးပြုသူ-အေးဂျင့်"
-
-msgid "User-Agent personalizzato"
-msgstr "စိတ်ကြိုက်အသုံးပြုသူ-အေးဂျင့်"
-
-msgid "Visualizza log"
-msgstr "မှတ်တမ်းများကိုကြည့်ပါ။"

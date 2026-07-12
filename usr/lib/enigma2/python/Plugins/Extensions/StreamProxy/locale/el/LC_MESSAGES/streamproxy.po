@@ -1,51 +1,24 @@
-# streamproxy translations
-# Copyright (C) 2025 Lululla Team
-# This file is distributed under the same license as the Lululla package.
-# [lululla] <ekekaz@gmail.com>, 2025.
+# el translations
+# Copyright (C) 2026 Lululla Team
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: streamproxy\n"
-"Report-Msgid-Bugs-To: \n"
+"Project-Id-Version: PACKAGE VERSION\n"
 "POT-Creation-Date: \n"
-"PO-Revision-Date: 2026-06-23 18:49+0000\n"
-"Last-Translator:  <EMAIL@ADDRESS>\n"
-"Language-Team: Greek <team@lists.gnome.gr>\n"
+"PO-Revision-Date: \n"
+"Last-Translator: \n"
+"Language-Team: el <ekekaz@gmail.com>\n"
 "Language: el\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-msgid "Abilita Stream Proxy"
-msgstr ""
+msgid "requests.packages.urllib3"
+msgstr "requests.packages.urllib3"
 
-msgid "Abilita filtro canali"
-msgstr "Ενεργοποίηση φίλτρου καναλιού"
+msgid "requests.packages.urllib3.exceptions"
+msgstr "requests.packages.urllib3.exceptions"
 
-msgid "Annulla"
-msgstr "Ματαίωση"
+msgid "requests.packages.urllib3.util.retry"
+msgstr "requests.packages.urllib3.util.retry"
 
-msgid "Mostra notifiche"
-msgstr "Εμφάνιση ειδοποιήσεων"
-
-msgid "Numero massimo righe log"
-msgstr "Μέγιστος αριθμός γραμμών καταγραφής"
-
-msgid "Porta proxy"
-msgstr ""
-
-msgid "Salva"
-msgstr "Σάλβα"
-
-msgid "StreamProxy Setup"
-msgstr "Ρύθμιση StreamProxy"
-
-msgid "User-Agent"
-msgstr "Χρήστης-Πράκτορας"
-
-msgid "User-Agent personalizzato"
-msgstr "Προσαρμοσμένος παράγοντας χρήστη"
-
-msgid "Visualizza log"
-msgstr "Προβολή αρχείων καταγραφής"

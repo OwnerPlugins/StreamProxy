@@ -8,6 +8,8 @@ from Components.Label import Label
 import os
 import json
 
+from . import load_skin
+
 # Global variables
 service_monitor = None
 DEBUG_ENABLED = True
@@ -141,16 +143,13 @@ def sessionstart(reason, **kwargs):
 
 
 class StreamProxyMain(Screen):
-    skin = """
-        <screen position="center,center" size="560,300" title="Stream Proxy">
-            <widget name="status" position="10,10" size="540,200" font="Regular;22" halign="center" valign="center"/>
-            <ePixmap pixmap="skin_default/buttons/red.png" position="10,260" size="140,40" alphatest="on" />
-            <ePixmap pixmap="skin_default/buttons/green.png" position="150,260" size="140,40" alphatest="on" />
-            <widget name="key_red" position="10,260" zPosition="1" size="140,40" font="Regular;20" halign="center" valign="center" backgroundColor="#9f1313" transparent="1" />
-            <widget name="key_green" position="150,260" zPosition="1" size="140,40" font="Regular;20" halign="center" valign="center" backgroundColor="#1f771f" transparent="1" />
-        </screen>"""
 
     def __init__(self, session):
+
+        skin_data = load_skin("StreamProxyMain")
+        if skin_data:
+            self.skin = skin_data
+
         Screen.__init__(self, session)
         self.session = session
 
@@ -174,16 +173,12 @@ class StreamProxyMain(Screen):
 
 
 class StreamProxySetup(Screen):
-    skin = """
-        <screen position="center,center" size="500,400" title="StreamProxy Setup">
-            <widget name="menu" position="10,10" size="480,320" font="Regular;22" />
-            <ePixmap pixmap="skin_default/buttons/red.png" position="10,350" size="140,40" alphatest="on" />
-            <ePixmap pixmap="skin_default/buttons/green.png" position="150,350" size="140,40" alphatest="on" />
-            <widget name="key_red" position="10,350" zPosition="1" size="140,40" font="Regular;20" halign="center" valign="center" backgroundColor="#9f1313" transparent="1" />
-            <widget name="key_green" position="150,350" zPosition="1" size="140,40" font="Regular;20" halign="center" valign="center" backgroundColor="#1f771f" transparent="1" />
-        </screen>"""
 
     def __init__(self, session):
+        skin_data = load_skin("StreamProxySetup")
+        if skin_data:
+            self.skin = skin_data
+
         Screen.__init__(self, session)
         self.session = session
 
@@ -194,7 +189,9 @@ class StreamProxySetup(Screen):
 
         self["menu"] = Label()
         self.updateMenu()
-
+        self["title"] = Label("Stream Proxy Setup")
+        self["description"] = Label("Select a setting to configure")
+        self["status"] = Label("")
         self["key_red"] = Label("Close")
         self["key_green"] = Label("Save")
 
@@ -205,6 +202,11 @@ class StreamProxySetup(Screen):
                                         "green": self.saveAndClose,
                                         "ok": self.toggleSetting
         }, -2)
+
+    def updateDescription(self):
+        current = self["config"].getCurrent()
+        if current:
+            self["description"].setText(current[1].help_window.instance.getText())
 
     def saveAndClose(self):
         """Save changes and close"""
@@ -255,10 +257,14 @@ class StreamProxySetup(Screen):
         if choice:
             if choice[1] == "proxy":
                 self.proxy_enabled = not self.proxy_enabled
+                self["description"].setText(
+                    "Enable or disable Stream Proxy service")
+
             elif choice[1] == "debug":
                 self.debug_mode = not self.debug_mode
+                self["description"].setText(
+                    "Enable or disable debug logging")
 
-            # Update menu immediately
             self.updateMenu()
 
 

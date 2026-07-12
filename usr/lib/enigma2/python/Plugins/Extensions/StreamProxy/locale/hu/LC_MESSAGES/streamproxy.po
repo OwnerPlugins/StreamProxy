@@ -1,51 +1,24 @@
-# streamproxy translations
-# Copyright (C) 2025 Lululla Team
-# This file is distributed under the same license as the Lululla package.
-# [lululla] <ekekaz@gmail.com>, 2025.
+# hu translations
+# Copyright (C) 2026 Lululla Team
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: streamproxy\n"
-"Report-Msgid-Bugs-To: \n"
+"Project-Id-Version: PACKAGE VERSION\n"
 "POT-Creation-Date: \n"
-"PO-Revision-Date: 2026-06-23 18:52+0000\n"
-"Last-Translator:  <EMAIL@ADDRESS>\n"
-"Language-Team: Hungarian <translation-team-hu@lists.sourceforge.net>\n"
+"PO-Revision-Date: \n"
+"Last-Translator: \n"
+"Language-Team: hu <ekekaz@gmail.com>\n"
 "Language: hu\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-msgid "Abilita Stream Proxy"
-msgstr ""
+msgid "requests.packages.urllib3"
+msgstr "requests.packages.urllib3"
 
-msgid "Abilita filtro canali"
-msgstr "Csatornaszűrő engedélyezése"
+msgid "requests.packages.urllib3.exceptions"
+msgstr "requests.packages.urllib3.exceptions"
 
-msgid "Annulla"
-msgstr "Mégsem"
+msgid "requests.packages.urllib3.util.retry"
+msgstr "requests.packages.urllib3.util.retry"
 
-msgid "Mostra notifiche"
-msgstr "Értesítések megjelenítése"
-
-msgid "Numero massimo righe log"
-msgstr "A naplósorok maximális száma"
-
-msgid "Porta proxy"
-msgstr ""
-
-msgid "Salva"
-msgstr ""
-
-msgid "StreamProxy Setup"
-msgstr "StreamProxy beállítása"
-
-msgid "User-Agent"
-msgstr ""
-
-msgid "User-Agent personalizzato"
-msgstr "Egyéni felhasználói ügynök"
-
-msgid "Visualizza log"
-msgstr "Naplók megtekintése"

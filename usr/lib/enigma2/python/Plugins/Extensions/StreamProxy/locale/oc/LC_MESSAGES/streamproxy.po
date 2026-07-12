@@ -1,50 +1,24 @@
-# streamproxy translations
-# Copyright (C) 2025 Lululla Team
-# This file is distributed under the same license as the Lululla package.
-# [lululla] <ekekaz@gmail.com>, 2025.
+# oc translations
+# Copyright (C) 2026 Lululla Team
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: streamproxy\n"
-"Report-Msgid-Bugs-To: \n"
+"Project-Id-Version: PACKAGE VERSION\n"
 "POT-Creation-Date: \n"
-"PO-Revision-Date: 2026-06-23 18:57+0000\n"
-"Last-Translator:  <EMAIL@ADDRESS>\n"
-"Language-Team: Occitan\n"
+"PO-Revision-Date: \n"
+"Last-Translator: \n"
+"Language-Team: oc <ekekaz@gmail.com>\n"
 "Language: oc\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-msgid "Abilita Stream Proxy"
-msgstr ""
+msgid "requests.packages.urllib3"
+msgstr "demandas.paquets.urllib3"
 
-msgid "Abilita filtro canali"
-msgstr "Activar lo filtre de canal"
+msgid "requests.packages.urllib3.exceptions"
+msgstr "demandas.paquets.urllib3.excepcions"
 
-msgid "Annulla"
-msgstr "Anullar"
+msgid "requests.packages.urllib3.util.retry"
+msgstr "requests.packages.urllib3.util.retensage"
 
-msgid "Mostra notifiche"
-msgstr "Afichar las notificacions"
-
-msgid "Numero massimo righe log"
-msgstr "Nombre maximal de linhas de jornal"
-
-msgid "Porta proxy"
-msgstr ""
-
-msgid "Salva"
-msgstr ""
-
-msgid "StreamProxy Setup"
-msgstr "Configuracion del proxy de flux"
-
-msgid "User-Agent"
-msgstr "Agent-Utilizaire"
-
-msgid "User-Agent personalizzato"
-msgstr "Agent-utilizaire personalizat"
-
-msgid "Visualizza log"
-msgstr "Afichar los jornals"

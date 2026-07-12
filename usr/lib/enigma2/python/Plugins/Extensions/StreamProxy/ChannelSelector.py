@@ -4,25 +4,21 @@ from Components.Label import Label
 from Components.Button import Button
 from Components.Input import Input
 from enigma import eTimer
-from .StreamProxyLog import enhanced_log
 from urllib.parse import unquote, urlparse, parse_qs
+
+# from . import load_skin_for_class
+from .StreamProxyLog import enhanced_log
+from . import load_skin
 
 
 class ChannelSelector(ChannelSelection):
-    skin = """
-        <screen name="ChannelSelector" position="center,center" size="1200,900" title="Select channels">
-            <eLabel text="Select the channels to use for Stream Proxy" position="20,10" size="1160,40" font="Regular;24" halign="center" />
-            <widget name="list" position="20,60" size="1160,700" scrollbarMode="showOnDemand" />
-            <eLabel text="Search:" position="20,770" size="60,40" font="Regular;22" />
-            <widget name="search_input" position="90,770" size="500,40" font="Regular;22" />
-            <widget name="status" position="20,820" size="1160,40" font="Regular;22" halign="center" />
-            <widget name="selectAllButton" position="600,770" size="200,40" font="Regular;22" />
-            <eLabel text="OK = Select/Deselect, GREEN = Save, YELLOW = Select All" position="20,870" size="1160,30" font="Regular;20" halign="center" />
-        </screen>
-    """
 
     def __init__(self, session, selected=None):
         enhanced_log("__init__ called", "DEBUG", "ChannelSelector")
+
+        skin_data = load_skin("ChannelSelector")
+        if skin_data:
+            self.skin = skin_data
 
         # Save the reference BEFORE everything else
         self.target_service_ref = session.nav.getCurrentlyPlayingServiceReference()

@@ -1,50 +1,24 @@
-# streamproxy translations
-# Copyright (C) 2025 Lululla Team
-# This file is distributed under the same license as the Lululla package.
-# [lululla] <ekekaz@gmail.com>, 2025.
+# id translations
+# Copyright (C) 2026 Lululla Team
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: streamproxy\n"
-"Report-Msgid-Bugs-To: \n"
+"Project-Id-Version: PACKAGE VERSION\n"
 "POT-Creation-Date: \n"
-"PO-Revision-Date: 2026-06-23 18:53+0000\n"
-"Last-Translator:  <EMAIL@ADDRESS>\n"
-"Language-Team: Indonesian <translation-team-id@lists.sourceforge.net>\n"
+"PO-Revision-Date: \n"
+"Last-Translator: \n"
+"Language-Team: id <ekekaz@gmail.com>\n"
 "Language: id\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-msgid "Abilita Stream Proxy"
-msgstr "Proksi Aliran Abilita"
+msgid "requests.packages.urllib3"
+msgstr "permintaan.paket.urllib3"
 
-msgid "Abilita filtro canali"
-msgstr "Aktifkan filter saluran"
+msgid "requests.packages.urllib3.exceptions"
+msgstr "permintaan.paket.urllib3.pengecualian"
 
-msgid "Annulla"
-msgstr "Membatalkan"
+msgid "requests.packages.urllib3.util.retry"
+msgstr "permintaan.paket.urllib3.util.coba lagi"
 
-msgid "Mostra notifiche"
-msgstr "Tampilkan notifikasi"
-
-msgid "Numero massimo righe log"
-msgstr "Jumlah maksimum baris log"
-
-msgid "Porta proxy"
-msgstr "Proksi porta"
-
-msgid "Salva"
-msgstr "penyelamatan"
-
-msgid "StreamProxy Setup"
-msgstr "Pengaturan StreamProxy"
-
-msgid "User-Agent"
-msgstr "Agen-Pengguna"
-
-msgid "User-Agent personalizzato"
-msgstr "Agen Pengguna Khusus"
-
-msgid "Visualizza log"
-msgstr "Lihat log"
