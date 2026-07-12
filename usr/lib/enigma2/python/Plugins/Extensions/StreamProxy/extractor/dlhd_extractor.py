@@ -1509,7 +1509,8 @@ class DLHDExtractor:
                         candidate in seen or seen.add(candidate))]
                 for candidate in candidate_urls:
                     if self._stop_requested:
-                        raise DLHDExtractorError("Extraction aborted: stop requested")
+                        raise DLHDExtractorError(
+                            "Extraction aborted: stop requested")
                     for manifest_candidate in self._manifest_candidate_variants(
                             candidate):
                         playback_headers = self._build_dlstreams_headers(

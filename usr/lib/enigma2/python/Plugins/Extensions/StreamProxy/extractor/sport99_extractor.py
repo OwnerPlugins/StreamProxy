@@ -233,7 +233,10 @@ class Sport99Extractor:
             return None
         fn_name = re.escape(fn_match.group(1))
         # Find all var name = 'base64value' assignments
-        parts_map = dict(re.findall(r"var\s+([A-Za-z0-9_]+)\s*=\s*'([^']+)'", html))
+        parts_map = dict(
+            re.findall(
+                r"var\s+([A-Za-z0-9_]+)\s*=\s*'([^']+)'",
+                html))
         # Find the URL variable built by concatenating fn(varN)+fn(varN)+...
         concat_match = re.search(
             r'var\s+[A-Za-z0-9_]+\s*=\s*('
@@ -242,10 +245,14 @@ class Sport99Extractor:
             html)
         if not concat_match:
             return None
-        var_names = re.findall(fn_name + r'\(([A-Za-z0-9_]+)\)', concat_match.group(1))
-        url = ''.join(self._decode_base64(parts_map.get(v, '')) for v in var_names)
+        var_names = re.findall(
+            fn_name + r'\(([A-Za-z0-9_]+)\)',
+            concat_match.group(1))
+        url = ''.join(self._decode_base64(parts_map.get(v, ''))
+                      for v in var_names)
         if url.startswith('http') and '.m3u8' in url:
-            enhanced_log("M3U8 from base64 concat: %s" % url[:100], "INFO", "SPORT99")
+            enhanced_log("M3U8 from base64 concat: %s" %
+                         url[:100], "INFO", "SPORT99")
             return url
         return None
 
@@ -309,11 +316,21 @@ class Sport99Extractor:
         try:
             import json as _json
             data = _json.loads(html)
-            for key in ("url", "stream_url", "hls", "m3u8", "source", "src", "link"):
-                val = data.get(key) or (data.get("data") or {}).get(key) if isinstance(data, dict) else None
+            for key in (
+                "url",
+                "stream_url",
+                "hls",
+                "m3u8",
+                "source",
+                "src",
+                    "link"):
+                val = data.get(key) or (
+                    data.get("data") or {}).get(key) if isinstance(
+                    data, dict) else None
                 if val and isinstance(val, str) and val.startswith("http"):
                     stream_url = val
-                    enhanced_log("M3U8 from JSON key '%s': %s" % (key, stream_url[:80]), "INFO", "SPORT99")
+                    enhanced_log("M3U8 from JSON key '%s': %s" % (
+                        key, stream_url[:80]), "INFO", "SPORT99")
                     break
         except Exception:
             pass
@@ -331,7 +348,8 @@ class Sport99Extractor:
                 html or "",
             )
             if not packed_match:
-                enhanced_log("HTML/JSON response: %s" % html[:3000], "DEBUG", "SPORT99")
+                enhanced_log("HTML/JSON response: %s" %
+                             html[:3000], "DEBUG", "SPORT99")
                 raise Sport99ExtractorError("Packed script not found")
 
             h_value, u_value, n_value, t_value, e_value, _unused = packed_match.groups()

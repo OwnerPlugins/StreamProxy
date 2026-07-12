@@ -375,7 +375,8 @@ class StreamProxyServiceMonitor:
                     from .AppCore import dlhd_extractor as _dlhd_ext
                     if _dlhd_ext and hasattr(_dlhd_ext, 'stop'):
                         _dlhd_ext.stop()
-                        enhanced_log("[SERVICEMONITOR] DLHD extraction aborted (DVB channel)", "INFO")
+                        enhanced_log(
+                            "[SERVICEMONITOR] DLHD extraction aborted (DVB channel)", "INFO")
                 except Exception:
                     pass
                 return self._call_orig_playService(

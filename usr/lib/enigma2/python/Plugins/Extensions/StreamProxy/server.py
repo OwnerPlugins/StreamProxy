@@ -363,21 +363,30 @@ def start_simple_server(port=7860):
                                 allow_redirects=True
                             )
                             self.send_response(upstream.status_code)
-                            self.send_header('Content-Type', upstream.headers.get('Content-Type', content_type))
+                            self.send_header(
+                                'Content-Type',
+                                upstream.headers.get(
+                                    'Content-Type',
+                                    content_type))
                             if 'Content-Length' in upstream.headers:
-                                self.send_header('Content-Length', upstream.headers['Content-Length'])
+                                self.send_header(
+                                    'Content-Length', upstream.headers['Content-Length'])
                             if 'Content-Range' in upstream.headers:
-                                self.send_header('Content-Range', upstream.headers['Content-Range'])
+                                self.send_header(
+                                    'Content-Range', upstream.headers['Content-Range'])
                             self.send_header('Accept-Ranges', 'bytes')
                             self.send_header('Cache-Control', 'no-cache')
                             self.end_headers()
-                            for chunk in upstream.iter_content(chunk_size=65536):
+                            for chunk in upstream.iter_content(
+                                    chunk_size=65536):
                                 if chunk:
                                     self.wfile.write(chunk)
                         except (BrokenPipeError, ConnectionResetError):
                             pass
                         except Exception as stream_err:
-                            enhanced_log("[SERVER] Stream error: %s" % stream_err, "ERROR", "SERVER")
+                            enhanced_log(
+                                "[SERVER] Stream error: %s" %
+                                stream_err, "ERROR", "SERVER")
                         return
 
                     content, response_status, content_type = normalize_appcore_result(

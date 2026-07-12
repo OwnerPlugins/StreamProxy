@@ -3607,7 +3607,6 @@ def proxy_ts(request=None, **kwargs):
                 'content_type': non_ts_content_type
             }
 
-
         # =====================================================================
         if EXTERNAL_PROXY_AVAILABLE and is_proxy_esterno_attivo() and (
                 'stream.mardio.link' in ts_url.lower() or is_cdn_daddy_url(ts_url)):
