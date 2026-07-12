@@ -75,6 +75,15 @@ class ProxyTSResource(resource.Resource):
 
     def sendTSResponse(self, result, request):
         try:
+            if isinstance(result, dict) and result.get("redirect_url"):
+                request.setResponseCode(int(result.get("status", 302) or 302))
+                request.setHeader(
+                    b'location', str(
+                        result["redirect_url"]).encode("ascii", "ignore"))
+                request.setHeader(b'content-type', b'video/mp4')
+                request.setHeader(b'content-length', b'0')
+                request.finish()
+                return
             content, status, content_type = normalize_appcore_result(
                 result, "video/mp2t")
 
@@ -333,18 +342,42 @@ def start_simple_server(port=7860):
                         "SERVER")
                     if isinstance(result, dict) and result.get("redirect_url"):
                         redirect_url = str(result["redirect_url"])
-                        response_status = int(result.get("status", 302) or 302)
                         content_type = result.get("content_type", "video/mp4")
+                        upstream_headers = result.get("redirect_headers") or {}
                         enhanced_log(
-                            "[SERVER] Redirect to direct media: %s..." % redirect_url[:100],
+                            "[SERVER] Streaming direct media: %s..." % redirect_url[:100],
                             "INFO",
                             "SERVER")
-                        self.send_response(response_status)
-                        self.send_header('Location', redirect_url)
-                        self.send_header('Content-Type', content_type)
-                        self.send_header('Cache-Control', 'no-cache')
-                        self.send_header('Content-Length', '0')
-                        self.end_headers()
+                        try:
+                            import requests as _requests
+                            range_header = self.headers.get('Range')
+                            req_headers = dict(upstream_headers)
+                            if range_header:
+                                req_headers['Range'] = range_header
+                            upstream = _requests.get(
+                                redirect_url,
+                                headers=req_headers,
+                                stream=True,
+                                timeout=(10, 60),
+                                verify=False,
+                                allow_redirects=True
+                            )
+                            self.send_response(upstream.status_code)
+                            self.send_header('Content-Type', upstream.headers.get('Content-Type', content_type))
+                            if 'Content-Length' in upstream.headers:
+                                self.send_header('Content-Length', upstream.headers['Content-Length'])
+                            if 'Content-Range' in upstream.headers:
+                                self.send_header('Content-Range', upstream.headers['Content-Range'])
+                            self.send_header('Accept-Ranges', 'bytes')
+                            self.send_header('Cache-Control', 'no-cache')
+                            self.end_headers()
+                            for chunk in upstream.iter_content(chunk_size=65536):
+                                if chunk:
+                                    self.wfile.write(chunk)
+                        except (BrokenPipeError, ConnectionResetError):
+                            pass
+                        except Exception as stream_err:
+                            enhanced_log("[SERVER] Stream error: %s" % stream_err, "ERROR", "SERVER")
                         return
 
                     content, response_status, content_type = normalize_appcore_result(

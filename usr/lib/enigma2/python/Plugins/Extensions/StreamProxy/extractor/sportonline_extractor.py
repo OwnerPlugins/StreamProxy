@@ -371,7 +371,10 @@ def is_sportonline_link(url):
         domain in lowered for domain in (
             "sportsonline",
             "sportzonline",
-            "sportssonline"))
+            "sportssonline",
+            "sportsonlinne",
+            "sporttsonline",
+            "sportonline"))
 
 
 if __name__ == "__main__":

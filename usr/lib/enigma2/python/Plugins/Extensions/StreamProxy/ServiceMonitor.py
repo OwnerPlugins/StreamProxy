@@ -371,6 +371,13 @@ class StreamProxyServiceMonitor:
 
             if not url_part:
                 self._reset_proxy_state()
+                try:
+                    from .AppCore import dlhd_extractor as _dlhd_ext
+                    if _dlhd_ext and hasattr(_dlhd_ext, 'stop'):
+                        _dlhd_ext.stop()
+                        enhanced_log("[SERVICEMONITOR] DLHD extraction aborted (DVB channel)", "INFO")
+                except Exception:
+                    pass
                 return self._call_orig_playService(
                     ref, checkParentalControl, forceRestart, adjust)
 
@@ -427,6 +434,12 @@ class StreamProxyServiceMonitor:
                 enhanced_log(
                     "[SERVICEMONITOR] URL does not require proxy: %s..." % clean_url[:100], "DEBUG")
                 self._reset_proxy_state()
+                try:
+                    from .AppCore import dlhd_extractor as _dlhd_ext
+                    if _dlhd_ext and hasattr(_dlhd_ext, 'stop'):
+                        _dlhd_ext.stop()
+                except Exception:
+                    pass
                 return self._call_orig_playService(
                     ref, checkParentalControl, forceRestart, adjust)
 
@@ -814,7 +827,7 @@ class StreamProxyServiceMonitor:
             # Vavoo
             "vavoo",
             # SportOnline
-            "sportzonline", "sportsonline", "sportonline", "sportssonline", "sporttsonline",
+            "sportzonline", "sportsonline", "sportonline", "sportssonline", "sporttsonline", "sportsonlinne",
             # Sport99 / CDNLiveTV
             "cdnlivetv.tv", "streamsports99.su", "sports99", "sport99",
             # TVTap

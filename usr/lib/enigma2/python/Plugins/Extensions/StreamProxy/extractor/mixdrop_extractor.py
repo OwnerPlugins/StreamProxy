@@ -349,25 +349,27 @@ class MixdropExtractor:
         mirror_domains = [
             "mixdrop.co",
             "mixdrop.vip",
-            "m1xdrop.net",
             "m1xdrop.bz",
             "mixdrop.ch",
             "mixdrop.ps",
             "mixdrop.ag",
+            "m1xdrop.net",
         ]
         parsed_url = urlparse(normalized_url)
         path_and_query = parsed_url.path
         if parsed_url.query:
             path_and_query += "?" + parsed_url.query
         mirrors = []
-        if parsed_url.scheme and parsed_url.netloc:
+        input_domain = parsed_url.netloc.lower()
+        if parsed_url.scheme and input_domain:
+            # If input is already a known mirror, start from it; always try all
             for domain in mirror_domains:
                 mirrors.append(
                     "%s://%s%s" % (parsed_url.scheme, domain, path_and_query))
+            if normalized_url not in mirrors:
+                mirrors.insert(0, normalized_url)
         else:
             mirrors.append(normalized_url)
-        if normalized_url not in mirrors:
-            mirrors.insert(0, normalized_url)
 
         last_error = None
         for mirror_url in mirrors:
@@ -400,7 +402,10 @@ class MixdropExtractor:
                     cookies = solver_result["cookies"]
                 else:
                     html = response.text
-                    final_page_url = response.url
+                    # Keep mirror_url as referer: response.url may redirect to
+                    # a cloaking domain (e.g. miiiixdrop.net) that mxcontent.net
+                    # CDN does not accept as a valid Referer/Origin.
+                    final_page_url = mirror_url
                     cookies.update(response.cookies.get_dict())
 
                 # Check Cloudflare
@@ -507,8 +512,11 @@ class MixdropExtractor:
         }
 
     def close(self):
-        if self.session and not self.session.closed:
-            self.session.close()
+        if self.session:
+            try:
+                self.session.close()
+            except Exception:
+                pass
 
 
 def is_mixdrop_link(url):
@@ -520,12 +528,11 @@ def is_mixdrop_link(url):
         domain in url_lower for domain in [
             'mixdrop.co',
             'mixdrop.vip',
-            'm1xdrop.net',
             'm1xdrop.bz',
+            'm1xdrop.net',
             'mixdrop.ch',
             'mixdrop.ps',
-            'mixdrop.ag',
-            'mxcontent.net'])
+            'mixdrop.ag'])
 
 
 # Factory function for compatibility

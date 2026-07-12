@@ -2580,23 +2580,32 @@ def proxy_m3u(request=None, **kwargs):
         current_headers_for_proxy.update(custom_headers or {})
 
         if final_url and is_direct_media_url(final_url):
-            headers_query = "&".join(["h_%s=%s" % (quote(k), quote(
-                v)) for k, v in current_headers_for_proxy.items()])
-            media_stream_id = get_stream_id_from_url(m3u_url)
-            encoded_media_url = quote(final_url, safe='')
-            proxy_media_url = "http://127.0.0.1:7860/proxy/ts?url=%s&fmp4=1&stream_id=%s" % (
-                encoded_media_url, media_stream_id)
-            if headers_query:
-                proxy_media_url += "&%s" % headers_query
             enhanced_log(
-                "[DIRECT_MEDIA] Direct URL resolved, generating playlist wrapper: %s..." % final_url[:80],
+                "[DIRECT_MEDIA] Direct MP4 URL, routing via proxy/ts: %s..." % final_url[:80],
                 "INFO",
                 "AppCore")
+            stream_id = get_stream_id_from_url(m3u_url)
+            headers_query = "&".join(["h_%s=%s" % (quote(k), quote(
+                v)) for k, v in current_headers_for_proxy.items()])
+            if headers_query:
+                proxy_seg_url = "http://127.0.0.1:7860/proxy/ts?url=%s&stream_id=%s&%s" % (
+                    quote(final_url), stream_id, headers_query)
+            else:
+                proxy_seg_url = "http://127.0.0.1:7860/proxy/ts?url=%s&stream_id=%s" % (
+                    quote(final_url), stream_id)
+            m3u8_wrapper = (
+                "#EXTM3U\n"
+                "#EXT-X-VERSION:3\n"
+                "#EXT-X-TARGETDURATION:7200\n"
+                "#EXT-X-MEDIA-SEQUENCE:0\n"
+                "#EXTINF:7200.0,\n"
+                "%s\n"
+                "#EXT-X-ENDLIST\n"
+            ) % proxy_seg_url
             return {
-                'content': b'',
-                'status': 302,
-                'content_type': 'video/mp4',
-                'redirect_url': proxy_media_url
+                'content': m3u8_wrapper.encode(),
+                'status': 200,
+                'content_type': 'application/vnd.apple.mpegurl',
             }
 
         # If the resolver (e.g. Vix) hasn't already provided the content,
@@ -3525,6 +3534,19 @@ def proxy_ts(request=None, **kwargs):
         merged_headers.update(headers)
         headers = merged_headers
 
+    # Early exit for direct media URLs — signal server to stream directly
+    if is_direct_media_url(ts_url):
+        enhanced_log(
+            "[PROXY_TS] Direct media URL, streaming via server: %s" % ts_url[-60:],
+            "INFO",
+            "proxy_ts")
+        return {
+            'redirect_url': ts_url,
+            'redirect_headers': headers,
+            'status': 302,
+            'content_type': 'video/mp4'
+        }
+
     timeout = 4 if 'lovecdn.ru' in ts_url.lower() else 8
     enhanced_log(
         "[PROXY_TS] Timeout set: %ds" % timeout,
@@ -3585,19 +3607,7 @@ def proxy_ts(request=None, **kwargs):
                 'content_type': non_ts_content_type
             }
 
-        if is_direct_media_url(ts_url):
-            enhanced_log(
-                "[PROXY_TS] Direct media served without TS conversion: %s" % ts_url[-60:],
-                "INFO",
-                "proxy_ts")
-            return {
-                'content': ts_content,
-                'status': 200,
-                'content_type': 'video/mp4'
-            }
 
-        # =====================================================================
-        # EXTERNAL PROXY: Fetch segment via external proxy
         # =====================================================================
         if EXTERNAL_PROXY_AVAILABLE and is_proxy_esterno_attivo() and (
                 'stream.mardio.link' in ts_url.lower() or is_cdn_daddy_url(ts_url)):

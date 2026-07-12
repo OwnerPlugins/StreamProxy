@@ -244,6 +244,7 @@ class DLHDExtractor:
         # Lock for thread safety
         self._extraction_locks = {}
         self._config_refreshed = False
+        self._stop_requested = False
 
         # Statistics
         self.stats = {
@@ -740,7 +741,13 @@ class DLHDExtractor:
                 "DLHD")
         return None
 
+    def stop(self):
+        """Signal all active extraction loops to abort."""
+        self._stop_requested = True
+
     def _fetch_manifest_directly(self, url, headers):
+        if self._stop_requested:
+            return None
         try:
             resp = self._http_get(url, headers=headers, timeout=10)
             if resp.status_code == 200:
@@ -1433,6 +1440,8 @@ class DLHDExtractor:
                 m3u8_url, iframe_origin, manifest_text)
 
         for player_url in self._prioritize_player_urls(channel_id)[:2]:
+            if self._stop_requested:
+                raise DLHDExtractorError("Extraction aborted: stop requested")
             player_html = self._prime_dlstreams_session(
                 player_url, referer=url)
             html_candidates = self._extract_dlstreams_candidates_from_html(
@@ -1499,6 +1508,8 @@ class DLHDExtractor:
                     candidate for candidate in candidate_urls if not (
                         candidate in seen or seen.add(candidate))]
                 for candidate in candidate_urls:
+                    if self._stop_requested:
+                        raise DLHDExtractorError("Extraction aborted: stop requested")
                     for manifest_candidate in self._manifest_candidate_variants(
                             candidate):
                         playback_headers = self._build_dlstreams_headers(
@@ -2176,6 +2187,8 @@ class DLHDExtractor:
         last_error = None
 
         for iframe_host in hosts_to_try:
+            if self._stop_requested:
+                raise DLHDExtractorError("Extraction aborted: stop requested")
             try:
                 if str(iframe_host).startswith("http"):
                     iframe_url = str(iframe_host)
@@ -2612,6 +2625,7 @@ class DLHDExtractor:
 
     def extract_stream(self, url, force_refresh=False):
         """Main extraction method - Compatible with AppCore."""
+        self._stop_requested = False
         enhanced_log(
             "[EXTRACT] === STARTING OPTIMISED DLHD EXTRACTION ===",
             "INFO",
