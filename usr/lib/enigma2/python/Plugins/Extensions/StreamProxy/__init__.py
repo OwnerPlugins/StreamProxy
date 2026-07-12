@@ -103,6 +103,7 @@ def load_skin(screen_name):
             return None
     except Exception as e:
         print("[StreamProxy DEBUG] load_skin ERROR: {}".format(e))
-        print("[StreamProxy DEBUG] Traceback: {}".format(traceback.format_exc()))
+        print(
+            "[StreamProxy DEBUG] Traceback: {}".format(
+                traceback.format_exc()))
         return None
-

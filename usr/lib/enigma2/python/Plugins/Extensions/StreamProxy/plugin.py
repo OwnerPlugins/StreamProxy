@@ -206,7 +206,8 @@ class StreamProxySetup(Screen):
     def updateDescription(self):
         current = self["config"].getCurrent()
         if current:
-            self["description"].setText(current[1].help_window.instance.getText())
+            self["description"].setText(
+                current[1].help_window.instance.getText())
 
     def saveAndClose(self):
         """Save changes and close"""
