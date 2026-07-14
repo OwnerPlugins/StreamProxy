@@ -1,0 +1,18 @@
+<screen name="StreamProxySetup" position="center,center" size="1280,720" title="Config Stream Proxy">
+  <eLabel backgroundColor="#ff0000" position="38,0" size="301,60" zPosition="1" />
+  <eLabel backgroundColor="#ff00" position="339,0" size="301,60" zPosition="1" />
+  <eLabel backgroundColor="#ffff00" position="643,0" size="301,60" zPosition="1" />
+  <eLabel backgroundColor="#ff" position="942,0" size="301,60" zPosition="1" />
+  <widget name="key_red" position="38,0" zPosition="2" size="301,60" font="Regular;17" halign="center" valign="center" backgroundColor="#9f1313" transparent="1" />
+  <widget name="key_green" position="339,0" zPosition="2" size="301,60" font="Regular;17" halign="center" valign="center" backgroundColor="#1f771f" transparent="1" />
+  <widget name="key_yellow" position="641,0" zPosition="2" size="301,60" font="Regular;17" halign="center" valign="center" backgroundColor="#a08500" transparent="1" />
+  <widget name="key_blue" position="942,0" zPosition="2" size="301,60" font="Regular;17" halign="center" valign="center" backgroundColor="#18188b" transparent="1" />
+  <widget name="title" position="38,65" size="1205,45" font="Regular;19" halign="center" valign="center" foregroundColor="#bab329" />
+  <widget name="description" position="38,117" size="1205,60" font="Regular;16" halign="center" valign="center" />
+  <eLabel position="38,185" size="1205,1" backgroundColor="#999999" />
+  <widget name="config" position="38,195" size="1205,398" enableWrapAround="1" scrollbarMode="showOnDemand" itemHeight="33" font="Regular;16" />
+  <eLabel position="38,600" size="1205,1" backgroundColor="#999999" />
+  <widget name="status" position="38,610" size="1205,60" font="Regular;16" halign="center" valign="center" foregroundColor="#bab329" />
+  <widget name="loading" position="38,675" size="1205,30" pixmap="skin_default/progress_bg.png" zPosition="1" transparent="1" />
+  <widget name="loading_progress" position="38,675" size="0,30" pixmap="skin_default/progress.png" zPosition="2" transparent="1" />
+</screen>

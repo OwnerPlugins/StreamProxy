@@ -1,0 +1,8 @@
+<screen name="StreamProxyMain" position="0,1858" size="3840,300" title="Main Stream Proxy">
+  <eLabel backgroundColor="#ff0000" position="0,30" size="904,180" zPosition="1" />
+  <eLabel backgroundColor="#ff00" position="2932,30" size="904,180" zPosition="1" />
+  <widget name="key_red" position="0,30" zPosition="2" size="904,180" font="Regular;57" halign="center" valign="center" backgroundColor="#9f1313" transparent="1" />
+  <widget name="key_green" position="2932,30" zPosition="2" size="904,180" font="Regular;57" halign="center" valign="center" backgroundColor="#1f771f" transparent="1" />
+  <eLabel position="0,8" size="3840,4" backgroundColor="#999999" />
+  <widget name="status" position="0,30" size="3840,180" font="Regular;51" halign="center" valign="center" foregroundColor="#bab329" />
+</screen>

@@ -1,0 +1,18 @@
+<screen name="StreamProxySetup" position="center,center" size="3840,2160" title="Config Stream Proxy">
+  <eLabel backgroundColor="#ff0000" position="114,0" size="904,180" zPosition="1" />
+  <eLabel backgroundColor="#ff00" position="1018,0" size="904,180" zPosition="1" />
+  <eLabel backgroundColor="#ffff00" position="1929,0" size="904,180" zPosition="1" />
+  <eLabel backgroundColor="#ff" position="2826,0" size="904,180" zPosition="1" />
+  <widget name="key_red" position="114,0" zPosition="2" size="904,180" font="Regular;51" halign="center" valign="center" backgroundColor="#9f1313" transparent="1" />
+  <widget name="key_green" position="1018,0" zPosition="2" size="904,180" font="Regular;51" halign="center" valign="center" backgroundColor="#1f771f" transparent="1" />
+  <widget name="key_yellow" position="1922,0" zPosition="2" size="904,180" font="Regular;51" halign="center" valign="center" backgroundColor="#a08500" transparent="1" />
+  <widget name="key_blue" position="2826,0" zPosition="2" size="902,180" font="Regular;51" halign="center" valign="center" backgroundColor="#18188b" transparent="1" />
+  <widget name="title" position="114,191" size="3614,136" font="Regular;56" halign="center" valign="center" foregroundColor="#bab329" />
+  <widget name="description" position="114,342" size="3614,180" font="Regular;48" halign="center" valign="center" />
+  <eLabel position="114,546" size="3614,4" backgroundColor="#999999" />
+  <widget name="config" position="114,585" size="3614,1197" enableWrapAround="1" scrollbarMode="showOnDemand" itemHeight="100" font="Regular;48" />
+  <eLabel position="114,1811" size="3614,4" backgroundColor="#999999" />
+  <widget name="status" position="114,1835" size="3614,180" font="Regular;48" halign="center" valign="center" foregroundColor="#bab329" />
+  <widget name="loading" position="114,2026" size="3614,90" pixmap="skin_default/progress_bg.png" zPosition="4" transparent="1" />
+  <widget name="loading_progress" position="114,2026" size="0,90" pixmap="skin_default/progress.png" zPosition="6" transparent="1" />
+</screen>

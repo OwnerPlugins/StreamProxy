@@ -1,0 +1,18 @@
+<screen name="StreamProxySetup" position="0,0" size="1920,1080" title="Config Stream Proxy">
+  <eLabel backgroundColor="#ff0000" position="57,0" size="452,90" zPosition="1" />
+  <eLabel backgroundColor="#ff00" position="509,0" size="452,90" zPosition="1" />
+  <eLabel backgroundColor="#ffff00" position="964,0" size="452,90" zPosition="1" />
+  <eLabel backgroundColor="#ff" position="1413,0" size="452,90" zPosition="1" />
+  <widget name="key_red" position="57,0" zPosition="2" size="452,90" font="Regular;26" halign="center" valign="center" backgroundColor="#9f1313" transparent="1" />
+  <widget name="key_green" position="509,0" zPosition="2" size="452,90" font="Regular;26" halign="center" valign="center" backgroundColor="#1f771f" transparent="1" />
+  <widget name="key_yellow" position="961,0" zPosition="2" size="452,90" font="Regular;26" halign="center" valign="center" backgroundColor="#a08500" transparent="1" />
+  <widget name="key_blue" position="1413,0" zPosition="2" size="451,90" font="Regular;26" halign="center" valign="center" backgroundColor="#18188b" transparent="1" />
+  <widget name="title" position="57,97" size="1807,68" font="Regular;28" halign="center" valign="center" foregroundColor="#bab329" />
+  <widget name="description" position="57,171" size="1807,90" font="Regular;24" halign="center" valign="center" />
+  <eLabel position="57,268" size="1807,2" backgroundColor="#999999" />
+  <widget name="config" position="57,280" size="1807,616" enableWrapAround="1" scrollbarMode="showOnDemand" itemHeight="50" font="Regular;24" />
+  <eLabel position="57,903" size="1807,2" backgroundColor="#999999" />
+  <widget name="status" position="57,915" size="1807,90" font="Regular;24" halign="center" valign="center" foregroundColor="#bab329" />
+  <widget name="loading" position="57,1013" size="1807,45" pixmap="skin_default/progress_bg.png" zPosition="2" transparent="1" />
+  <widget name="loading_progress" position="57,1013" size="0,45" pixmap="skin_default/progress.png" zPosition="3" transparent="1" />
+</screen>

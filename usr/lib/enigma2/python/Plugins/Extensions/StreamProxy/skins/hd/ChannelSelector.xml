@@ -1,0 +1,17 @@
+<screen name="ChannelSelector" position="center,center" size="1280,720" title="Channels Stream Proxy">
+  <eLabel backgroundColor="#ff0000" position="38,0" size="301,60" zPosition="1" />
+  <eLabel backgroundColor="#ff00" position="339,0" size="301,60" zPosition="1" />
+  <eLabel backgroundColor="#ffff00" position="643,0" size="301,60" zPosition="1" />
+  <eLabel backgroundColor="#ff" position="942,0" size="301,60" zPosition="1" />
+  <widget name="key_red" position="38,0" zPosition="2" size="301,60" font="Regular;17" halign="center" valign="center" backgroundColor="#9f1313" transparent="1" />
+  <widget name="key_green" position="339,0" zPosition="2" size="301,60" font="Regular;17" halign="center" valign="center" backgroundColor="#1f771f" transparent="1" />
+  <widget name="key_yellow" position="641,0" zPosition="2" size="301,60" font="Regular;17" halign="center" valign="center" backgroundColor="#a08500" transparent="1" />
+  <widget name="key_blue" position="942,0" zPosition="2" size="301,60" font="Regular;17" halign="center" valign="center" backgroundColor="#18188b" transparent="1" />
+  <eLabel position="35,64" size="1209,1" backgroundColor="#999999" />
+  <widget name="instructions" position="35,77" size="1209,51" font="Regular;16" halign="center" valign="center" />
+  <widget name="search_label" position="35,141" size="178,39" font="Regular;15" halign="left" valign="center" />
+  <widget name="search" position="231,141" size="1013,39" font="Regular;15" halign="left" valign="center" />
+  <widget name="list" position="35,193" size="1209,450" enableWrapAround="1" scrollbarMode="showOnDemand" itemHeight="33" />
+  <eLabel position="35,656" size="1209,1" backgroundColor="#999999" />
+  <widget name="status" position="35,669" size="1209,39" font="Regular;15" halign="center" valign="center" foregroundColor="#bab329" />
+</screen>
