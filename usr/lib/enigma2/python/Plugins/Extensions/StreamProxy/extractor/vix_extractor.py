@@ -131,7 +131,8 @@ class VixSrcExtractor:
                 VIXSRC_CONFIG_URL,
                 headers=self._fresh_headers(accept="application/json"),
                 timeout=4, retries=1)
-            domain = self._clean_domain(json.loads(response.text).get("vixsrc"))
+            domain = self._clean_domain(
+                json.loads(response.text).get("vixsrc"))
             if domain:
                 self.vixsrc_domain = domain
                 enhanced_log("Current VixSrc domain: %s" % domain,
@@ -527,7 +528,8 @@ class VixSrcExtractor:
                 }
 
             # Domain discovery is useful for pages/embeds, but an already signed
-            # playlist must keep its original host and takes the fast path above.
+            # playlist must keep its original host and takes the fast path
+            # above.
             self._refresh_vixsrc_domain()
             url = self._replace_vixsrc_domain(url)
             parsed_url = urlparse(url)
@@ -586,7 +588,8 @@ class VixSrcExtractor:
             if not final_url:
                 raise VixExtractorError("No playlist data found in response")
 
-            # Apply the current configured VixSrc host without hard-coded mirrors.
+            # Apply the current configured VixSrc host without hard-coded
+            # mirrors.
             final_url = self._replace_vixsrc_domain(final_url)
             stream_url = self._replace_vixsrc_domain(url)
 
