@@ -6,6 +6,10 @@ import time
 import html
 from urllib.parse import parse_qs, parse_qsl, unquote, urlencode, urljoin, urlparse, urlunparse
 
+VIXSRC_CONFIG_URL = ("https://raw.githubusercontent.com/realbestia1/damains/"
+                     "refs/heads/main/damains.json")
+VIXSRC_DOMAIN_CACHE_TTL = 300
+
 try:
     import curl_cffi.requests as requests
 except ImportError:
@@ -56,6 +60,8 @@ class VixSrcExtractor:
         self.is_vixsrc = True
         self.session = None
         self.using_curl_cffi = False
+        self.vixsrc_domain = None
+        self.vixsrc_config_loaded_at = 0
 
         if requests:
             # Try curl_cffi first to avoid detection
@@ -100,6 +106,50 @@ class VixSrcExtractor:
         if not parsed.scheme or not parsed.netloc:
             raise VixExtractorError("Invalid VixSrc URL")
         return "%s://%s" % (parsed.scheme, parsed.netloc)
+
+    @staticmethod
+    def _clean_domain(value):
+        """Return a safe hostname from the remote domain configuration."""
+        value = (value or "").strip().lower()
+        if not value:
+            return None
+        if "://" not in value:
+            value = "https://" + value
+        hostname = urlparse(value).hostname
+        if not hostname or not re.match(r"^[a-z0-9.-]+$", hostname):
+            return None
+        return hostname
+
+    def _refresh_vixsrc_domain(self):
+        """Refresh the current hostname, caching failures for Enigma2."""
+        now = time.time()
+        if now - self.vixsrc_config_loaded_at < VIXSRC_DOMAIN_CACHE_TTL:
+            return
+        self.vixsrc_config_loaded_at = now
+        try:
+            response = self._request(
+                VIXSRC_CONFIG_URL,
+                headers=self._fresh_headers(accept="application/json"),
+                timeout=4, retries=1)
+            domain = self._clean_domain(json.loads(response.text).get("vixsrc"))
+            if domain:
+                self.vixsrc_domain = domain
+                enhanced_log("Current VixSrc domain: %s" % domain,
+                             "DEBUG", "VIX")
+        except Exception as exc:
+            enhanced_log("Domain refresh skipped: %s" % str(exc)[:120],
+                         "DEBUG", "VIX")
+
+    def _replace_vixsrc_domain(self, url):
+        """Replace only legacy Vix hosts, preserving path and signed query."""
+        if not self.vixsrc_domain:
+            return url
+        parsed = urlparse(url)
+        if (parsed.hostname or "").lower() not in ("vixsrc.to", "vixcloud.co"):
+            return url
+        port = ":%d" % parsed.port if parsed.port else ""
+        return urlunparse(parsed._replace(
+            netloc=self.vixsrc_domain + port))
 
     def _request(
             self,
@@ -360,7 +410,9 @@ class VixSrcExtractor:
             asn=None):
         base_url = (base_url or "").replace("\\/", "/")
         parsed = urlparse(base_url)
-        query_params = parse_qsl(parsed.query, keep_blank_values=True)
+        managed = ("token", "expires", "h", "lang", "asn")
+        query_params = [item for item in parse_qsl(
+            parsed.query, keep_blank_values=True) if item[0] not in managed]
         query_params.extend([("token", str(token)), ("expires", str(expires))])
         if can_play_fhd:
             query_params.append(("h", "1"))
@@ -455,13 +507,6 @@ class VixSrcExtractor:
             if not url.startswith("http"):
                 url = "https://" + re.sub(r"^//", "", url)
 
-            # Rewrite unitv.mom as in the server proxy
-            url = url.replace(
-                "vixsrc.to",
-                "unitv.mom").replace(
-                "vixcloud.co",
-                "unitv.mom")
-
             parsed_url = urlparse(url)
             response = None
 
@@ -471,7 +516,8 @@ class VixSrcExtractor:
                     "URL already resolved - direct passthrough",
                     "INFO",
                     "VIX")
-                stream_headers = self._fresh_headers()
+                stream_headers = self._fresh_headers(
+                    Referer=self._normalize_base_site(url) + "/")
                 return {
                     "resolved_url": url,
                     "destination_url": url,
@@ -479,6 +525,12 @@ class VixSrcExtractor:
                     "request_headers": stream_headers,
                     "mediaflow_endpoint": self.mediaflow_endpoint,
                 }
+
+            # Domain discovery is useful for pages/embeds, but an already signed
+            # playlist must keep its original host and takes the fast path above.
+            self._refresh_vixsrc_domain()
+            url = self._replace_vixsrc_domain(url)
+            parsed_url = urlparse(url)
 
             if "/embed/" in parsed_url.path:
                 self._raise_if_embed_expired(url)
@@ -505,7 +557,8 @@ class VixSrcExtractor:
                     re.IGNORECASE)
                 if not iframe_match:
                     raise VixExtractorError("No iframe found in response")
-                iframe_url = iframe_match.group(1)
+                iframe_url = self._replace_vixsrc_domain(urljoin(
+                    site_url + "/", html.unescape(iframe_match.group(1))))
                 response = self._request(iframe_url, headers=inertia_headers)
 
             elif "/movie/" in parsed_url.path or "/tv/" in parsed_url.path:
@@ -533,13 +586,9 @@ class VixSrcExtractor:
             if not final_url:
                 raise VixExtractorError("No playlist data found in response")
 
-            # Rewrite vixcloud.co/vixsrc.to → unitv.mom in the final URL
-            final_url = final_url.replace(
-                "vixcloud.co", "unitv.mom").replace(
-                "vixsrc.to", "unitv.mom")
-            stream_url = url.replace(
-                "vixcloud.co", "unitv.mom").replace(
-                "vixsrc.to", "unitv.mom")
+            # Apply the current configured VixSrc host without hard-coded mirrors.
+            final_url = self._replace_vixsrc_domain(final_url)
+            stream_url = self._replace_vixsrc_domain(url)
 
             enhanced_log("SUCCESS: %s..." % final_url[:120], "INFO", "VIX")
 
